@@ -1,0 +1,39 @@
+import pandas as pd
+import sqlite3
+import time
+
+DB_FILE = "db/jenkins_data.db"
+
+
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS jenkins_items
+        (name TEXT, url TEXT, type TEXT, last_build_status TEXT, 
+         last_build_url TEXT, folder TEXT, timestamp REAL)
+    """)
+    conn.commit()
+    conn.close()
+
+
+def get_cached_data():
+    conn = sqlite3.connect(DB_FILE)
+    try:
+        df = pd.read_sql_query(
+            "SELECT name, url, type, last_build_status, last_build_url, folder FROM jenkins_items",
+            conn,
+        )
+        df["last_build_status"] = df["last_build_status"].fillna("Unknown")
+        return df
+    except (pd.io.sql.DatabaseError, sqlite3.OperationalError):
+        return None
+    finally:
+        conn.close()
+
+
+def cache_data(df):
+    conn = sqlite3.connect(DB_FILE)
+    df["timestamp"] = time.time()
+    df.to_sql("jenkins_items", conn, if_exists="replace", index=False)
+    conn.close()
