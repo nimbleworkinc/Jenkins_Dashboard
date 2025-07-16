@@ -126,8 +126,25 @@ def get_all_jenkins_items(url, _auth):
                 if last_build_date:
                     days_since_last_build = (datetime.now(timezone.utc) - last_build_date).days
                 
-                # Get total build count
+                # Get total build count and calculate success rate
                 total_builds = len(builds) if builds else 0
+                
+                # Calculate success/failure rates from build history
+                success_count = 0
+                failure_count = 0
+                success_rate = 0.0
+                
+                if builds:
+                    for build in builds:
+                        build_result = build.get("result")
+                        if build_result == "SUCCESS":
+                            success_count += 1
+                        elif build_result in ["FAILURE", "UNSTABLE", "ABORTED"]:
+                            failure_count += 1
+                    
+                    # Calculate success rate (only if there are builds)
+                    if total_builds > 0:
+                        success_rate = (success_count / total_builds) * 100
                 
                 # Use simple test job detection with exclusion list
                 job_name = job.get("name", "")
@@ -147,6 +164,9 @@ def get_all_jenkins_items(url, _auth):
                         "last_failed_date": last_failed_date,
                         "days_since_last_build": days_since_last_build,
                         "total_builds": total_builds,
+                        "success_count": success_count,
+                        "failure_count": failure_count,
+                        "success_rate": success_rate,
                         "is_test_job": is_test_job_result,
                     }
                 )
