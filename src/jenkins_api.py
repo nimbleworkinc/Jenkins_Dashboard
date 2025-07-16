@@ -2,6 +2,7 @@ import requests
 from urllib.parse import unquote
 import streamlit as st
 from datetime import datetime, timezone
+from src.config import DashboardConfig
 
 
 def extract_folder_from_url(url):
@@ -15,55 +16,22 @@ def extract_folder_from_url(url):
 
 def is_test_job(job_name):
     """
-    Simple test job detection with exclusion list.
-    Add words to exclude_list to ignore them in test job detection.
+    Professional test job detection using configuration.
+    Uses environment variables for exclude words and keywords.
     """
     if not job_name:
         return False
     
     job_name_lower = job_name.lower()
     
-    # Add words here that should be ignored (not detected as test jobs)
-    exclude_list = [
-        "latest",
-        "nightly-test",
-        "nightly-test-delete",
-        "nightly-test-deploy",
-        "nightly-tests",
-        "saastest",
-        "attest",
-        "contest",
-        "detest",
-        "protest",
-        "suggest",
-        "request",
-        "rest",
-        "nest",
-        "west",
-        "east",
-        "best",
-        "manifest",
-        "testament",
-        "testimony",
-        "testosterone",
-        "testicular",
-        "testify",
-        "testimonial",
-        "testable",
-        "tested"
-    ]
-    
-    # Check if job name contains any excluded words
-    for word in exclude_list:
-        if word in job_name_lower:
+    # Check if job name contains any excluded words from config
+    for word in DashboardConfig.TEST_JOB_EXCLUDE_WORDS:
+        if word.strip() and word.strip() in job_name_lower:
             return False
     
-    # Test job keywords to detect
-    test_keywords = ["test", "testing", "tst", "demo", "trial", "experiment"] # "temp", "tmp", "poc"
-    
-    # Check if job name contains any test keywords
-    for keyword in test_keywords:
-        if keyword in job_name_lower:
+    # Check if job name contains any test keywords from config
+    for keyword in DashboardConfig.TEST_JOB_KEYWORDS:
+        if keyword.strip() and keyword.strip() in job_name_lower:
             return True
     
     return False

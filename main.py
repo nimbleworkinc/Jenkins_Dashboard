@@ -6,11 +6,20 @@ from requests.auth import HTTPBasicAuth
 from src.data_manager import init_db, get_cached_data, cache_data
 from src.jenkins_api import get_all_jenkins_items
 from src.ui import render_ui
+from src.config import DashboardConfig
 
 load_dotenv()
 
-st.set_page_config(layout="wide")
-st.title("Jenkins Jobs and Pipelines Dashboard")
+# Validate configuration
+try:
+    DashboardConfig.validate_config()
+except ValueError as e:
+    st.error(f"Configuration Error: {e}")
+    st.error("Please check your .env file and ensure all required variables are set.")
+    st.stop()
+
+st.set_page_config(layout=DashboardConfig.PAGE_LAYOUT)
+st.title(DashboardConfig.DASHBOARD_TITLE)
 
 init_db()
 
@@ -21,17 +30,10 @@ if st.sidebar.button("Refresh Data from Jenkins") or df is None or df.empty:
     if df is None or df.empty:
         st.info("No cached data found. Fetching from Jenkins...")
 
-    jenkins_user = os.getenv("JENKINS_USER")
-    jenkins_token = os.getenv("JENKINS_TOKEN")
-
-    if not jenkins_user or not jenkins_token:
-        st.error("Jenkins credentials not found in .env file.")
-        st.stop()
-
-    auth = HTTPBasicAuth(jenkins_user, jenkins_token)
-    jenkins_base_url = os.getenv("JENKINS_BASE_URL")
+    auth = HTTPBasicAuth(DashboardConfig.JENKINS_USER, DashboardConfig.JENKINS_TOKEN)
+    
     with st.spinner("Fetching all jobs and pipelines... this may take a moment."):
-        all_items = get_all_jenkins_items(jenkins_base_url, auth)
+        all_items = get_all_jenkins_items(DashboardConfig.JENKINS_BASE_URL, auth)
         if all_items:
             df = pd.DataFrame(all_items)
             cache_data(df)

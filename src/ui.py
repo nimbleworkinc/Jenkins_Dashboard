@@ -2,6 +2,7 @@ import streamlit as st
 import plotly.express as px
 from datetime import datetime, timedelta
 import pandas as pd
+from src.config import DashboardConfig
 
 
 def render_ui(df):
@@ -57,7 +58,8 @@ def render_dashboard_tab(df):
         # Pagination controls
         st.markdown("---")
         st.header("📄 Pagination")
-        items_per_page = st.selectbox("Items per page", [25, 50, 100, 200], index=1)
+        items_per_page = st.selectbox("Items per page", [25, 50, 100, 200], 
+                                    index=[25, 50, 100, 200].index(DashboardConfig.ITEMS_PER_PAGE_DEFAULT))
         
         # Show current filter summary
         st.markdown("---")
@@ -135,8 +137,8 @@ def render_enhanced_visualizations(df, total_filtered_items, total_items):
             st.metric("❌ Failure Rate", f"{failure_rate:.1f}%", f"{failure_count} jobs")
         
         with col3:
-            inactive_count = len(df[df["days_since_last_build"] > 60]) if "days_since_last_build" in df.columns else 0
-            st.metric("⏰ Inactive Jobs", inactive_count, f">60 days")
+            inactive_count = len(df[df["days_since_last_build"] > DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS]) if "days_since_last_build" in df.columns else 0
+            st.metric("⏰ Inactive Jobs", inactive_count, f">{DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS} days")
         
         with col4:
             disabled_count = len(df[df["is_disabled"] == True]) if "is_disabled" in df.columns else 0
@@ -309,11 +311,11 @@ def render_test_jobs_section(df):
 
 def render_inactive_jobs_section(df):
     st.subheader("⏰ Inactive Jobs")
-    st.markdown("Jobs that haven't been triggered for 60+ days:")
+    st.markdown(f"Jobs that haven't been triggered for {DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS}+ days:")
     
-    # Filter for jobs with last build more than 60 days ago
+    # Filter for jobs with last build more than threshold days ago
     inactive_jobs = df[
-        (df["days_since_last_build"] > 60) & 
+        (df["days_since_last_build"] > DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS) & 
         (df["days_since_last_build"].notna())
     ].copy()
     
@@ -392,7 +394,7 @@ def render_cleanup_summary(df):
     # Calculate statistics
     total_jobs = len(df)
     test_jobs_count = len(df[df["is_test_job"] == True])
-    inactive_jobs_count = len(df[(df["days_since_last_build"] > 60) & (df["days_since_last_build"].notna())])
+    inactive_jobs_count = len(df[(df["days_since_last_build"] > DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS) & (df["days_since_last_build"].notna())])
     disabled_jobs_count = len(df[df["is_disabled"] == True])
     
     # Create summary metrics
@@ -419,7 +421,7 @@ def render_cleanup_summary(df):
         recommendations.append(f"**{test_jobs_count} test jobs** found - Consider reviewing and removing obsolete test pipelines")
     
     if inactive_jobs_count > 0:
-        recommendations.append(f"**{inactive_jobs_count} inactive jobs** found - Consider archiving or removing jobs not used for 60+ days")
+        recommendations.append(f"**{inactive_jobs_count} inactive jobs** found - Consider archiving or removing jobs not used for {DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS}+ days")
     
     if disabled_jobs_count > 0:
         recommendations.append(f"**{disabled_jobs_count} disabled jobs** found - Review if these should be re-enabled or removed")
@@ -453,7 +455,7 @@ def get_inactive_job_recommendation(row):
 
 def get_disabled_job_recommendation(row):
     """Generate recommendation for disabled jobs"""
-    if row["days_since_last_build"] and row["days_since_last_build"] > 60:
+    if row["days_since_last_build"] and row["days_since_last_build"] > DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS:
         return "🗑️ Consider removal - disabled and inactive"
     else:
         return "📋 Review - disabled but recently active"

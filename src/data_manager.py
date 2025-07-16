@@ -1,8 +1,9 @@
 import pandas as pd
 import sqlite3
 import time
+from src.config import DashboardConfig
 
-DB_FILE = "db/jenkins_data.db"
+DB_FILE = DashboardConfig.DB_FILE
 
 
 def init_db():
