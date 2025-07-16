@@ -41,7 +41,7 @@ This Streamlit application provides a dashboard to view and analyze Jenkins jobs
     ```bash
     python -m venv .venv
     source .venv/bin/activate  # On Windows, use `.venv\Scripts\activate`
-    pip install -r requirements.txt # Or use `uv` if you have it
+    pip install -e . # Or use `uv` if you have it
     ```
 
 3.  **Create a `.env` file:**
