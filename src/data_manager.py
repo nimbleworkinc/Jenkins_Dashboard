@@ -16,7 +16,10 @@ def init_db():
          is_disabled INTEGER, last_build_date TEXT, last_successful_date TEXT,
          last_failed_date TEXT, days_since_last_build INTEGER, total_builds INTEGER,
          success_count INTEGER, failure_count INTEGER, success_rate REAL,
-         is_test_job INTEGER)
+         is_test_job INTEGER, last_build_duration INTEGER, last_successful_duration INTEGER,
+         last_failed_duration INTEGER, avg_build_duration REAL, avg_successful_duration REAL,
+         avg_failed_duration REAL, min_build_duration INTEGER, max_build_duration INTEGER,
+         total_build_duration INTEGER)
     """)
     conn.commit()
     conn.close()
@@ -29,7 +32,10 @@ def get_cached_data():
             "SELECT name, url, type, last_build_status, last_build_url, folder, "
             "is_disabled, last_build_date, last_successful_date, last_failed_date, "
             "days_since_last_build, total_builds, success_count, failure_count, "
-            "success_rate, is_test_job FROM jenkins_items",
+            "success_rate, is_test_job, last_build_duration, last_successful_duration, "
+            "last_failed_duration, avg_build_duration, avg_successful_duration, "
+            "avg_failed_duration, min_build_duration, max_build_duration, "
+            "total_build_duration FROM jenkins_items",
             conn,
         )
         df["last_build_status"] = df["last_build_status"].fillna("Unknown")
@@ -40,6 +46,12 @@ def get_cached_data():
         df["success_rate"] = df["success_rate"].fillna(0.0)
         df["success_count"] = df["success_count"].fillna(0)
         df["failure_count"] = df["failure_count"].fillna(0)
+        # Fill NaN values for duration columns
+        duration_columns = ["last_build_duration", "last_successful_duration", "last_failed_duration",
+                          "avg_build_duration", "avg_successful_duration", "avg_failed_duration",
+                          "min_build_duration", "max_build_duration", "total_build_duration"]
+        for col in duration_columns:
+            df[col] = df[col].fillna(0)
         return df
     except (pd.io.sql.DatabaseError, sqlite3.OperationalError):
         return None

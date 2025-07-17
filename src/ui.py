@@ -6,20 +6,53 @@ from src.config import DashboardConfig
 
 
 def render_ui(df):
-    # Create tabs for different views
-    tab1, tab2 = st.tabs(["📊 Dashboard", "🧹 Cleanup Insights"])
+    # Main header with better styling
+    st.markdown("""
+    <div style="text-align: center; padding: 20px 0; background: linear-gradient(90deg, #1f77b4, #ff7f0e); border-radius: 10px; margin-bottom: 30px;">
+        <h1 style="color: white; margin: 0; font-size: 2.5em;">🚀 Jenkins Dashboard</h1>
+        <p style="color: white; margin: 5px 0 0 0; font-size: 1.1em;">Comprehensive CI/CD Pipeline Analytics</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    with tab1:
+    # Create main navigation with better spacing
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Use radio buttons for main navigation with better styling
+    main_nav = st.radio(
+        "**Main Navigation**",
+        ["📊 Dashboard", "🧹 Cleanup Insights", "📈 Analytics"],
+        horizontal=True,
+        label_visibility="collapsed"
+    )
+    
+    # Add significant spacing between main nav and content
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    
+    # Render content based on selection
+    if main_nav == "📊 Dashboard":
         render_dashboard_tab(df)
-    
-    with tab2:
+    elif main_nav == "🧹 Cleanup Insights":
         render_cleanup_tab(df)
+    elif main_nav == "📈 Analytics":
+        render_analytics_tab(df)
 
 
 def render_dashboard_tab(df):
+    """Render the main dashboard with enhanced styling"""
+    st.markdown("""
+    <div style="background: #f0f2f6; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+        <h2 style="margin: 0; color: #1f77b4;">📊 Dashboard Overview</h2>
+        <p style="margin: 10px 0 0 0; color: #666;">Monitor your Jenkins jobs and pipelines at a glance</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
     # Enhanced sidebar with better organization
     with st.sidebar:
-        st.header("🔍 Search & Filters")
+        st.markdown("""
+        <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin: 0; color: #1f77b4;">🔍 Search & Filters</h3>
+        </div>
+        """, unsafe_allow_html=True)
         
         # Smart search with autocomplete suggestions
         search_term = st.text_input(
@@ -35,7 +68,12 @@ def render_dashboard_tab(df):
             status_filter = st.selectbox("Filter by Status", ["All"] + sorted(df["last_build_status"].unique().tolist()))
         
         st.markdown("---")
-        st.header("📂 Quick Filters")
+        
+        st.markdown("""
+        <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin: 0; color: #1f77b4;">📂 Quick Filters</h3>
+        </div>
+        """, unsafe_allow_html=True)
         
         # Simple dropdown for folder filter (no search, show all)
         unique_folders = sorted(df["folder"].unique())
@@ -57,13 +95,25 @@ def render_dashboard_tab(df):
         
         # Pagination controls
         st.markdown("---")
-        st.header("📄 Pagination")
+        
+        st.markdown("""
+        <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin: 0; color: #1f77b4;">📄 Pagination</h3>
+        </div>
+        """, unsafe_allow_html=True)
+        
         items_per_page = st.selectbox("Items per page", [25, 50, 100, 200], 
                                     index=[25, 50, 100, 200].index(DashboardConfig.ITEMS_PER_PAGE_DEFAULT))
         
         # Show current filter summary
         st.markdown("---")
-        st.header("📊 Current Filters")
+        
+        st.markdown("""
+        <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin: 0; color: #1f77b4;">📊 Current Filters</h3>
+        </div>
+        """, unsafe_allow_html=True)
+        
         if search_term:
             st.info(f"🔍 Search: '{search_term}'")
         if folder_filter_multiselect:
@@ -244,21 +294,26 @@ def render_enhanced_data_table(df, total_filtered_items, items_per_page):
 
 
 def render_cleanup_tab(df):
-    st.header("🧹 Jenkins Cleanup Insights")
-    st.markdown("This page helps identify jobs that might need cleanup or attention.")
+    """Render the cleanup insights tab with enhanced styling"""
+    st.markdown("""
+    <div style="background: #f0f2f6; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+        <h2 style="margin: 0; color: #1f77b4;">🧹 Cleanup Insights</h2>
+        <p style="margin: 10px 0 0 0; color: #666;">Identify and manage test, inactive, and disabled jobs</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # Debug: Check if required columns exist
-    required_columns = ["is_test_job", "is_disabled", "days_since_last_build"]
-    missing_columns = [col for col in required_columns if col not in df.columns]
+    # Create sub-tabs with better spacing
+    st.markdown("<br>", unsafe_allow_html=True)
     
-    if missing_columns:
-        st.error(f"Missing required columns: {missing_columns}. Please refresh data from Jenkins.")
-        return
-    
-    # Create sub-tabs for different cleanup categories
     cleanup_tab1, cleanup_tab2, cleanup_tab3, cleanup_tab4 = st.tabs([
-        "🧪 Test Jobs", "⏰ Inactive Jobs", "🚫 Disabled Jobs", "📋 Summary"
+        "🧪 Test Jobs", 
+        "⏰ Inactive Jobs", 
+        "🚫 Disabled Jobs", 
+        "📋 Summary"
     ])
+    
+    # Add spacing between tabs and content
+    st.markdown("<br>", unsafe_allow_html=True)
     
     with cleanup_tab1:
         render_test_jobs_section(df)
@@ -274,13 +329,17 @@ def render_cleanup_tab(df):
 
 
 def render_test_jobs_section(df):
-    st.subheader("🧪 Test Jobs")
-    st.markdown("Jobs that appear to be test/demo/temporary pipelines:")
+    st.markdown("""
+    <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 20px;">
+        <h3 style="margin: 0; color: #856404;">🧪 Test Jobs</h3>
+        <p style="margin: 5px 0 0 0; color: #856404;">Jobs that appear to be test/demo/temporary pipelines</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     test_jobs = df[df["is_test_job"] == True].copy()
     
     if not test_jobs.empty:
-        st.info(f"Found {len(test_jobs)} potential test jobs")
+        st.success(f"Found {len(test_jobs)} potential test jobs")
         
         # Add search for test jobs
         test_search = st.text_input("🔍 Search test jobs...", placeholder="Filter test jobs by name or folder")
@@ -310,8 +369,12 @@ def render_test_jobs_section(df):
 
 
 def render_inactive_jobs_section(df):
-    st.subheader("⏰ Inactive Jobs")
-    st.markdown(f"Jobs that haven't been triggered for {DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS}+ days:")
+    st.markdown(f"""
+    <div style="background: #f8d7da; padding: 15px; border-radius: 8px; border-left: 4px solid #dc3545; margin-bottom: 20px;">
+        <h3 style="margin: 0; color: #721c24;">⏰ Inactive Jobs</h3>
+        <p style="margin: 5px 0 0 0; color: #721c24;">Jobs that haven't been triggered for {DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS}+ days</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Filter for jobs with last build more than threshold days ago
     inactive_jobs = df[
@@ -353,8 +416,12 @@ def render_inactive_jobs_section(df):
 
 
 def render_disabled_jobs_section(df):
-    st.subheader("🚫 Disabled Jobs")
-    st.markdown("Jobs that are currently disabled:")
+    st.markdown("""
+    <div style="background: #e2e3e5; padding: 15px; border-radius: 8px; border-left: 4px solid #6c757d; margin-bottom: 20px;">
+        <h3 style="margin: 0; color: #495057;">🚫 Disabled Jobs</h3>
+        <p style="margin: 5px 0 0 0; color: #495057;">Jobs that are currently disabled</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     disabled_jobs = df[df["is_disabled"] == True].copy()
     
@@ -389,7 +456,12 @@ def render_disabled_jobs_section(df):
 
 
 def render_cleanup_summary(df):
-    st.subheader("📋 Cleanup Summary")
+    st.markdown("""
+    <div style="background: #d1ecf1; padding: 15px; border-radius: 8px; border-left: 4px solid #17a2b8; margin-bottom: 20px;">
+        <h3 style="margin: 0; color: #0c5460;">📋 Cleanup Summary</h3>
+        <p style="margin: 5px 0 0 0; color: #0c5460;">Overview of jobs that may need attention</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Calculate statistics
     total_jobs = len(df)
@@ -397,7 +469,13 @@ def render_cleanup_summary(df):
     inactive_jobs_count = len(df[(df["days_since_last_build"] > DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS) & (df["days_since_last_build"].notna())])
     disabled_jobs_count = len(df[df["is_disabled"] == True])
     
-    # Create summary metrics
+    # Create summary metrics with better styling
+    st.markdown("""
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+        <h4 style="margin: 0 0 15px 0; color: #495057;">📊 Summary Metrics</h4>
+    </div>
+    """, unsafe_allow_html=True)
+    
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -412,8 +490,12 @@ def render_cleanup_summary(df):
     with col4:
         st.metric("Disabled Jobs", disabled_jobs_count, delta=f"{disabled_jobs_count/total_jobs*100:.1f}%")
     
-    # Recommendations
-    st.subheader("🎯 Cleanup Recommendations")
+    # Recommendations with better styling
+    st.markdown("""
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+        <h4 style="margin: 0 0 15px 0; color: #495057;">🎯 Cleanup Recommendations</h4>
+    </div>
+    """, unsafe_allow_html=True)
     
     recommendations = []
     
@@ -459,3 +541,213 @@ def get_disabled_job_recommendation(row):
         return "🗑️ Consider removal - disabled and inactive"
     else:
         return "📋 Review - disabled but recently active"
+
+
+def render_analytics_tab(df):
+    """Render the Analytics tab with practical build duration analysis and enhanced KPIs"""
+    st.markdown("""
+    <div style="background: #f0f2f6; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+        <h2 style="margin: 0; color: #1f77b4;">📈 Jenkins Analytics</h2>
+        <p style="margin: 10px 0 0 0; color: #666;">Build performance analysis and optimization insights</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Filter out jobs without duration data
+    jobs_with_duration = df[df["avg_build_duration"] > 0].copy()
+    
+    if jobs_with_duration.empty:
+        st.warning("No build duration data available. Please refresh the data to see analytics.")
+        return
+    
+    # Create sub-tabs with better spacing
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    analytics_tab1, analytics_tab2 = st.tabs([
+        "⏱️ Build Duration Analysis", 
+        "📊 Performance Insights"
+    ])
+    
+    # Add spacing between tabs and content
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    with analytics_tab1:
+        render_build_duration_analysis(jobs_with_duration)
+    
+    with analytics_tab2:
+        render_performance_insights(jobs_with_duration)
+
+
+def render_build_duration_analysis(df):
+    """Render build duration analysis with charts and insights"""
+    st.header("⏱️ Build Duration Analysis")
+    st.markdown("*Analyze build performance and identify optimization opportunities*")
+    
+    # Convert duration from milliseconds to minutes for better readability
+    df["avg_build_duration_min"] = df["avg_build_duration"] / 60000
+    df["last_build_duration_min"] = df["last_build_duration"] / 60000
+    df["avg_successful_duration_min"] = df["avg_successful_duration"] / 60000
+    df["avg_failed_duration_min"] = df["avg_failed_duration"] / 60000
+    
+    # Duration statistics - simplified without extra styling
+    st.subheader("📊 Duration Statistics")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        avg_duration = df["avg_build_duration_min"].mean()
+        st.metric("Average Build Duration", f"{avg_duration:.1f} min")
+    
+    with col2:
+        median_duration = df["avg_build_duration_min"].median()
+        st.metric("Median Build Duration", f"{median_duration:.1f} min")
+    
+    with col3:
+        max_duration = df["avg_build_duration_min"].max()
+        st.metric("Longest Average Build", f"{max_duration:.1f} min")
+    
+    with col4:
+        total_build_time = df["total_build_duration"].sum() / 60000 / 60  # Convert to hours
+        st.metric("Total Build Time", f"{total_build_time:.1f} hours")
+    
+    # Duration distribution chart
+    st.subheader("📊 Build Duration Distribution")
+    
+    # Create duration bins
+    df["duration_bin"] = pd.cut(df["avg_build_duration_min"], 
+                               bins=[0, 5, 15, 30, 60, 120, float('inf')],
+                               labels=["0-5 min", "5-15 min", "15-30 min", "30-60 min", "1-2 hours", "2+ hours"])
+    
+    duration_dist = df["duration_bin"].value_counts().sort_index()
+    
+    fig = px.bar(
+        x=duration_dist.index,
+        y=duration_dist.values,
+        title="Distribution of Average Build Durations",
+        labels={"x": "Duration Range", "y": "Number of Jobs"}
+    )
+    fig.update_layout(showlegend=False)
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Duration vs Success Rate scatter plot
+    st.subheader("📈 Duration vs Success Rate Correlation")
+    
+    fig = px.scatter(
+        df,
+        x="avg_build_duration_min",
+        y="success_rate",
+        color="last_build_status",
+        hover_data=["name", "folder"],
+        title="Build Duration vs Success Rate",
+        labels={"avg_build_duration_min": "Average Build Duration (minutes)", "success_rate": "Success Rate (%)"}
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Longest builds table
+    st.subheader("🐌 Longest Running Jobs")
+    
+    longest_jobs = df.nlargest(10, "avg_build_duration_min")[["name", "folder", "avg_build_duration_min", "success_rate", "total_builds"]]
+    
+    st.dataframe(
+        longest_jobs,
+        column_config={
+            "avg_build_duration_min": st.column_config.NumberColumn("Avg Duration (min)", format="%.1f"),
+            "success_rate": st.column_config.NumberColumn("Success Rate (%)", format="%.1f"),
+            "total_builds": st.column_config.NumberColumn("Total Builds", format="%d"),
+        },
+        use_container_width=True
+    )
+
+
+def render_performance_insights(df):
+    """Render performance insights based on build duration data"""
+    st.header("📊 Performance Insights")
+    st.markdown("*Key insights from build duration data*")
+    
+    # Calculate insights
+    total_jobs = len(df)
+    avg_duration = df["avg_build_duration_min"].mean()
+    median_duration = df["avg_build_duration_min"].median()
+    max_duration = df["avg_build_duration_min"].max()
+    
+    # KPI Cards - simplified
+    st.subheader("📈 Key Metrics")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Average Build Duration", f"{avg_duration:.1f} min")
+    
+    with col2:
+        st.metric("Median Build Duration", f"{median_duration:.1f} min")
+    
+    with col3:
+        st.metric("Longest Average Build", f"{max_duration:.1f} min")
+    
+    with col4:
+        total_build_time = df["total_build_duration"].sum() / 60000 / 60  # Convert to hours
+        st.metric("Total Build Time", f"{total_build_time:.1f} hours")
+    
+    # Performance insights - simplified
+    st.subheader("🎯 Performance Insights")
+    
+    insights = []
+    
+    if avg_duration > 30:
+        insights.append("⚠️ **Average build duration is high** - Consider optimizing build processes or parallelization")
+    elif avg_duration < 10:
+        insights.append("💡 **Average build duration is low** - This might indicate efficient builds")
+    
+    if median_duration > 30:
+        insights.append("⚠️ **Median build duration is high** - This could indicate a slow-moving pipeline or a bottleneck")
+    elif median_duration < 10:
+        insights.append("💡 **Median build duration is low** - This might be a sign of efficient builds")
+    
+    if max_duration > 60:
+        insights.append("⚠️ **Longest average build is high** - This could indicate a slow-moving pipeline or a bottleneck")
+    elif max_duration < 10:
+        insights.append("💡 **Longest average build is low** - This might be a sign of efficient builds")
+    
+    if total_build_time > 100:
+        insights.append("⚠️ **Total build time is high** - Consider optimizing build processes or parallelization")
+    elif total_build_time < 50:
+        insights.append("💡 **Total build time is low** - This might indicate efficient builds")
+    
+    if not insights:
+        insights.append("🎉 **Great performance!** - Your Jenkins instance is well-optimized")
+    
+    for insight in insights:
+        st.markdown(f"• {insight}")
+    
+    # Folder analysis - simplified
+    st.subheader("📁 Performance by Folder")
+    
+    folder_performance = df.groupby("folder").agg({
+        "avg_build_duration_min": "mean",
+        "success_rate": "mean",
+        "name": "count"
+    }).rename(columns={"name": "job_count"})
+    
+    # Only show folders with multiple jobs
+    folder_performance = folder_performance[folder_performance["job_count"] >= 3].sort_values("avg_build_duration_min", ascending=False)
+    
+    if not folder_performance.empty:
+        fig = px.bar(
+            folder_performance,
+            x=folder_performance.index,
+            y="avg_build_duration_min",
+            title="Average Build Duration by Folder",
+            labels={"avg_build_duration_min": "Duration (minutes)", "index": "Folder"}
+        )
+        fig.update_layout(showlegend=False)
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Show folder details
+        st.dataframe(
+            folder_performance,
+            column_config={
+                "avg_build_duration_min": st.column_config.NumberColumn("Avg Duration (min)", format="%.1f"),
+                "success_rate": st.column_config.NumberColumn("Success Rate (%)", format="%.1f"),
+                "job_count": st.column_config.NumberColumn("Job Count", format="%d"),
+            },
+            use_container_width=True
+        )
