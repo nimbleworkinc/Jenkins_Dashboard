@@ -278,85 +278,63 @@ def render_ui(df):
 
 def render_dashboard_tab(df):
     """Render the main dashboard with modern styling and enhanced visualizations"""
-    # Enhanced sidebar with modern styling
-    with st.sidebar:
-        st.markdown("""
-        <div style="background: white; border-radius: 12px; padding: 1.5rem; margin: 1rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); border: 1px solid #d1d5db;">
-            <h3 style="margin: 0 0 1rem 0; color: #000000;">🔍 Search & Filters</h3>
-        </div>
-        """, unsafe_allow_html=True)
-        
+    
+    # Define total_items at the beginning
+    total_items = len(df)
+    
+    # Horizontal Filter Bar - moved from sidebar to main content
+    st.markdown("""
+    <div class="section-header">
+        <h2>🔍 Search & Filters</h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Filter controls in horizontal layout - adjusted widths for better folder names
+    col1, col2, col3, col4 = st.columns([1.5, 2, 1, 0.8])
+    
+    with col1:
         # Smart search with autocomplete suggestions
         search_term = st.text_input(
             "🔎 Quick Search",
             placeholder="Search by job name, folder, or status...",
             help="Type to search across all fields"
         )
-        
-        # Advanced search options
-        with st.expander("🔧 Advanced Search", expanded=False):
-            name_filter = st.text_input("Filter by Name (exact match)")
-            folder_filter = st.text_input("Filter by Folder (exact match)")
-            status_filter = st.selectbox("Filter by Status", ["All"] + sorted(df["last_build_status"].unique().tolist()))
-        
-        st.markdown("---")
-        
-        st.markdown("""
-        <div style="background: white; border-radius: 12px; padding: 1.5rem; margin: 1rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); border: 1px solid #d1d5db;">
-            <h3 style="margin: 0 0 1rem 0; color: #000000;">📂 Quick Filters</h3>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Simple dropdown for folder filter (no search, show all)
+    
+    with col2:
+        # Simple dropdown for folder filter
         unique_folders = sorted(df["folder"].unique())
         folder_filter_multiselect = st.multiselect(
-            "📁 Filter by Folder",
+            "📁 Folders",
             options=unique_folders,
             default=[],  # No default selection - show all folders
             help="Select specific folders to include (leave empty to show all)"
         )
-        
+    
+    with col3:
         # Simple dropdown for status filter
         unique_statuses = sorted(df["last_build_status"].unique())
         status_filter_multiselect = st.multiselect(
-            "🎯 Filter by Status",
+            "🎯 Status",
             options=unique_statuses,
             default=[],  # No default selection - show all statuses
             help="Select specific statuses to include (leave empty to show all)"
         )
-        
+    
+    with col4:
         # Pagination controls
-        st.markdown("---")
-        
-        st.markdown("""
-        <div style="background: white; border-radius: 12px; padding: 1.5rem; margin: 1rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); border: 1px solid #d1d5db;">
-            <h3 style="margin: 0 0 1rem 0; color: #000000;">📄 Pagination</h3>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        items_per_page = st.selectbox("Items per page", [25, 50, 100, 200], 
+        items_per_page = st.selectbox("📄 Items per page", [25, 50, 100, 200], 
                                     index=[25, 50, 100, 200].index(DashboardConfig.ITEMS_PER_PAGE_DEFAULT))
-        
-        # Show current filter summary
-        st.markdown("---")
-        
-        st.markdown("""
-        <div style="background: white; border-radius: 12px; padding: 1.5rem; margin: 1rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); border: 1px solid #d1d5db;">
-            <h3 style="margin: 0 0 1rem 0; color: #000000;">📊 Current Filters</h3>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        if search_term:
-            st.info(f"🔍 Search: '{search_term}'")
-        if folder_filter_multiselect:
-            st.info(f"📁 Folders: {len(folder_filter_multiselect)} selected")
-        if status_filter_multiselect:
-            st.info(f"🎯 Status: {len(status_filter_multiselect)} selected")
-        
-        # Show total items info
-        total_items = len(df)
-        st.info(f"📊 Total Jobs: {total_items}")
-
+    
+    # Advanced search options in an expander
+    with st.expander("🔧 Advanced Search Options", expanded=False):
+        adv_col1, adv_col2, adv_col3 = st.columns(3)
+        with adv_col1:
+            name_filter = st.text_input("Filter by Name (exact match)")
+        with adv_col2:
+            folder_filter = st.text_input("Filter by Folder (exact match)")
+        with adv_col3:
+            status_filter = st.selectbox("Filter by Status", ["All"] + sorted(df["last_build_status"].unique().tolist()))
+    
     # Apply filters
     filtered_df = apply_filters(df, search_term, name_filter, folder_filter, status_filter, 
                                folder_filter_multiselect, status_filter_multiselect, [])
@@ -464,18 +442,25 @@ def render_enhanced_visualizations(df, total_filtered_items, total_items):
             )
         
         with col4:
-            disabled_count = len(df[df["is_disabled"] == True]) if "is_disabled" in df.columns else 0
-            st.metric(
-                "🚫 Disabled Jobs", 
-                disabled_count,
-                delta_color="normal"
-            )
+            # Dynamic Total Jobs card - shows filtered vs total
+            if total_filtered_items == total_items:
+                # No filters applied - show total jobs
+                st.metric(
+                    "📊 Total Jobs", 
+                    total_items,
+                    "All jobs",
+                    delta_color="normal"
+                )
+            else:
+                # Filters applied - show filtered/total format
+                st.metric(
+                    "📊 Total Jobs", 
+                    f"{total_filtered_items}/{total_items}",
+                    "Filtered jobs",
+                    delta_color="normal"
+                )
         
-        # Show filtered vs total info with modern styling
-        if total_filtered_items != total_items:
-            st.info(f"📊 Showing {total_filtered_items} of {total_items} total jobs (filtered)")
-        else:
-            st.info(f"📊 Showing all {total_items} jobs")
+
         
         # Enhanced pie chart with modern styling
         st.markdown("""
@@ -513,31 +498,36 @@ def render_enhanced_visualizations(df, total_filtered_items, total_items):
         
         st.plotly_chart(fig, use_container_width=True)
         
-        # Enhanced bar chart for folder distribution
+        # Enhanced build status trend analysis
         st.markdown("""
         <div class="section-header">
-            <h2>📁 Jobs by Folder</h2>
+            <h2>📈 Build Status Analysis</h2>
         </div>
         """, unsafe_allow_html=True)
         
-        folder_counts = df["folder"].value_counts().head(10)
+        # Calculate build status distribution with percentages
+        status_counts = df["last_build_status"].value_counts()
+        total_jobs = len(df)
+        status_percentages = (status_counts / total_jobs * 100).round(1)
         
+        # Create a more informative status chart
         fig = go.Figure(data=[go.Bar(
-            x=folder_counts.values,
-            y=folder_counts.index,
-            orientation='h',
-            marker_color='#000000',
-            marker_line_color='#000000',
+            x=status_counts.index,
+            y=status_counts.values,
+            text=[f"{count}<br>({pct}%)" for count, pct in zip(status_counts.values, status_percentages)],
+            textposition='auto',
+            marker_color=['#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#06b6d4'],
+            marker_line_color='rgba(0,0,0,0.1)',
             marker_line_width=1,
             opacity=0.8
         )])
         
         fig.update_layout(
-            title="Top 10 Folders by Job Count",
-            xaxis_title="Number of Jobs",
-            yaxis_title="Folder",
+            title="Build Status Distribution with Percentages",
+            xaxis_title="Build Status",
+            yaxis_title="Number of Jobs",
             height=400,
-            margin=dict(t=50, b=50, l=150, r=50),
+            margin=dict(t=50, b=50, l=50, r=50),
             showlegend=False
         )
         
@@ -957,10 +947,14 @@ def render_analytics_tab(df):
     
     # Create sub-tabs with modern styling
     analytics_tab1, analytics_tab2 = st.tabs([
+        "⏱️ Build Duration Analysis", 
         "📊 Performance Insights"
     ])
     
     with analytics_tab1:
+        render_build_duration_analysis(jobs_with_duration)
+    
+    with analytics_tab2:
         render_performance_insights(jobs_with_duration)
 
 
@@ -972,6 +966,13 @@ def render_build_duration_analysis(df):
     df["last_build_duration_min"] = df["last_build_duration"] / 60000
     df["avg_successful_duration_min"] = df["avg_successful_duration"] / 60000
     df["avg_failed_duration_min"] = df["avg_failed_duration"] / 60000
+    
+    # Data cleaning: Remove unrealistic values (more than 24 hours = 1440 minutes)
+    df_clean = df[df["avg_build_duration_min"] <= 1440].copy()
+    
+    if len(df_clean) < len(df):
+        st.warning(f"⚠️ Removed {len(df) - len(df_clean)} jobs with unrealistic build durations (>24 hours)")
+        df = df_clean
     
     # Duration statistics with modern styling
     st.markdown("""
@@ -992,7 +993,12 @@ def render_build_duration_analysis(df):
     
     with col3:
         max_duration = df["avg_build_duration_min"].max()
-        st.metric("Longest Average Build", f"{max_duration:.1f} min")
+        if max_duration > 60:
+            # Format as hours if more than 60 minutes
+            max_duration_hrs = max_duration / 60
+            st.metric("Longest Average Build", f"{max_duration_hrs:.1f} hours")
+        else:
+            st.metric("Longest Average Build", f"{max_duration:.1f} min")
     
     with col4:
         total_build_time = df["total_build_duration"].sum() / 60000 / 60  # Convert to hours
@@ -1109,6 +1115,11 @@ def render_performance_insights(df):
         <p>Key insights and recommendations from build duration data</p>
     </div>
     """, unsafe_allow_html=True)
+    
+    # Data cleaning: Remove unrealistic values (more than 24 hours = 1440 minutes)
+    df_clean = df[df["avg_build_duration_min"] <= 1440].copy()
+    if len(df_clean) < len(df):
+        df = df_clean
     
     # Calculate insights
     total_jobs = len(df)

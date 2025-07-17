@@ -25,7 +25,12 @@ init_db()
 # --- Main App Logic ---
 df = get_cached_data()
 
-if st.sidebar.button("Refresh Data from Jenkins") or df is None or df.empty:
+# Refresh button in main content area instead of sidebar
+col1, col2, col3 = st.columns([1, 1, 1])
+with col2:
+    refresh_button = st.button("🔄 Refresh Data from Jenkins", use_container_width=True)
+
+if refresh_button or df is None or df.empty:
     if df is None or df.empty:
         st.info("No cached data found. Fetching from Jenkins...")
 
