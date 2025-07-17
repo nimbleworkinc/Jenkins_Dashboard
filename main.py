@@ -25,13 +25,16 @@ init_db()
 # --- Main App Logic ---
 df = get_cached_data()
 
-# Refresh button in main content area instead of sidebar
-col1, col2, col3 = st.columns([1, 1, 1])
-with col2:
-    refresh_button = st.button("🔄 Refresh Data from Jenkins", use_container_width=True)
+# Data status display
+if df is not None and not df.empty:
+    # Show data status in a subtle way
+    st.caption(f"📊 {len(df)} jobs loaded • Last updated: {pd.Timestamp.now().strftime('%H:%M')}")
 
-if refresh_button or df is None or df.empty:
-    if df is None or df.empty:
+# Check if we need to fetch data (no cached data or refresh requested)
+if df is None or df.empty or st.session_state.get('refresh_data', False):
+    if st.session_state.get('refresh_data', False):
+        st.info("🔄 Refreshing data from Jenkins...")
+    else:
         st.info("No cached data found. Fetching from Jenkins...")
 
     auth = HTTPBasicAuth(DashboardConfig.JENKINS_USER, DashboardConfig.JENKINS_TOKEN)
@@ -41,7 +44,11 @@ if refresh_button or df is None or df.empty:
         if all_items:
             df = pd.DataFrame(all_items)
             cache_data(df)
-            st.success(f"Found and cached {len(df)} items.")
+            # Clear the refresh flag
+            if 'refresh_data' in st.session_state:
+                del st.session_state.refresh_data
+            st.success(f"✅ Successfully synced {len(df)} jobs from Jenkins!")
+            st.info("🔄 Refreshing dashboard with latest data...")
             st.rerun()
         else:
             st.warning("No items found or an error occurred.")

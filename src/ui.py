@@ -183,29 +183,54 @@ def load_custom_css():
         }
     }
     
-    /* Fix Streamlit Tab Text Visibility */
+    /* Enhanced Tab Navigation - Main and Sub Tabs */
     .stTabs [data-baseweb="tab-list"] {
         gap: 0.5rem;
+        margin-bottom: 1rem;
     }
     
     .stTabs [data-baseweb="tab"] {
         background-color: white;
         border-radius: 8px;
-        padding: 0.5rem 1rem;
+        padding: 0.75rem 1.5rem;
         border: 1px solid var(--border-color);
         color: #000000 !important;
-        font-weight: 500;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.2s ease;
+        min-width: 120px;
+        text-align: center;
     }
     
     .stTabs [data-baseweb="tab"]:hover {
         background-color: #f9fafb;
         color: #000000 !important;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
     
     .stTabs [data-baseweb="tab"][aria-selected="true"] {
         background-color: #1f2937;
         color: white !important;
         border-color: #1f2937;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        transform: translateY(-2px);
+    }
+    
+    /* Main Navigation Tabs - Larger and more prominent */
+    .stTabs:first-of-type [data-baseweb="tab"] {
+        padding: 1rem 2rem;
+        font-size: 1.1rem;
+        font-weight: 700;
+        min-width: 160px;
+        background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+    }
+    
+    .stTabs:first-of-type [data-baseweb="tab"][aria-selected="true"] {
+        background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+        color: white !important;
+        border: 2px solid #ffffff;
+    }
     }
     
     .stTabs [data-baseweb="tab"] span {
@@ -240,6 +265,36 @@ def load_custom_css():
     .stMarkdown li {
         color: #e5e7eb !important;
     }
+    
+    /* Settings Expander Styling */
+    .streamlit-expanderHeader {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 8px !important;
+        color: #ffffff !important;
+        font-weight: 500 !important;
+        padding: 0.5rem 1rem !important;
+    }
+    
+    .streamlit-expanderHeader:hover {
+        background-color: rgba(255, 255, 255, 0.15) !important;
+        border-color: rgba(255, 255, 255, 0.3) !important;
+    }
+    
+    .streamlit-expanderContent {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 8px !important;
+        margin-top: 0.5rem !important;
+        padding: 1rem !important;
+    }
+    
+    /* Disabled button styling */
+    .stButton > button:disabled {
+        background-color: #6b7280 !important;
+        color: #9ca3af !important;
+        cursor: not-allowed !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -256,23 +311,64 @@ def render_ui(df):
     </div>
     """, unsafe_allow_html=True)
     
-    # Use radio buttons for main navigation with enhanced styling
-    main_nav = st.radio(
-        "**Main Navigation**",
-        ["📊 Dashboard", "🧹 Cleanup Insights", "📈 Analytics"],
-        horizontal=True,
-        label_visibility="collapsed"
-    )
+    # Create tab layout with settings gear
+    tab_col, gear_col = st.columns([0.95, 0.05])
     
-    # Add spacing between nav and content
-    st.markdown("<br>", unsafe_allow_html=True)
+    with tab_col:
+        # Use tabs for main navigation with enhanced styling
+        main_tab1, main_tab2, main_tab3 = st.tabs([
+            "📊 Dashboard", 
+            "🧹 Cleanup Insights", 
+            "📈 Analytics"
+        ])
     
-    # Render content based on selection
-    if main_nav == "📊 Dashboard":
+    with gear_col:
+        # Settings gear button - small and subtle
+        gear_clicked = st.button("⚙️", key="settings_gear", help="Settings", use_container_width=True)
+        if gear_clicked:
+            st.session_state.show_settings = True
+            st.rerun()
+    
+    # Settings modal appears below the tabs (full width)
+    if st.session_state.get('show_settings', False):
+        st.markdown("---")
+        st.markdown("### ⚙️ Settings")
+        
+        # Warning message
+        st.warning("⚠️ **Data Sync Warning**: This will fetch fresh data from Jenkins and may take 30-60 seconds. Only use when you need the latest information.")
+        
+        # Confirmation checkbox
+        sync_confirmed = st.checkbox("I understand and want to sync data from Jenkins")
+        
+        # Sync button (only enabled if confirmed)
+        refresh_button = st.button(
+            "🔄 Sync Latest Data from Jenkins", 
+            disabled=not sync_confirmed,
+            help="Fetch the most recent job and pipeline data from Jenkins. This may take a few moments.",
+            use_container_width=True
+        )
+        
+        if refresh_button:
+            st.info("🔄 Syncing data from Jenkins...")
+            # Trigger data refresh by setting session state
+            st.session_state.refresh_data = True
+            st.session_state.show_settings = False
+            st.rerun()
+        
+        # Close button
+        if st.button("❌ Close Settings", use_container_width=True):
+            st.session_state.show_settings = False
+            st.rerun()
+        
+        st.markdown("---")
+    
+    with main_tab1:
         render_dashboard_tab(df)
-    elif main_nav == "🧹 Cleanup Insights":
+    
+    with main_tab2:
         render_cleanup_tab(df)
-    elif main_nav == "📈 Analytics":
+    
+    with main_tab3:
         render_analytics_tab(df)
 
 
@@ -339,7 +435,7 @@ def render_dashboard_tab(df):
     filtered_df = apply_filters(df, search_term, name_filter, folder_filter, status_filter, 
                                folder_filter_multiselect, status_filter_multiselect, [])
     
-    # Enhanced visualizations with modern styling
+    # Enhanced visualizations with modern styling (showing filtered data)
     render_enhanced_visualizations(filtered_df, len(filtered_df), total_items)
     
     # Enhanced data display with integrated pagination
@@ -877,7 +973,7 @@ def render_cleanup_summary(df):
     # Cleanup progress visualization
     st.markdown("""
     <div class="section-header">
-        <h2>�� Cleanup Progress</h2>
+        <h2>📊 Cleanup Progress</h2>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1195,13 +1291,6 @@ def get_outlier_recommendation(row):
 
 def render_performance_insights(df):
     """Render performance insights with modern styling and enhanced visualizations"""
-    st.markdown("""
-    <div class="section-header">
-        <h2>📊 Performance Insights</h2>
-        <p>Key insights and recommendations from build duration data</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
     # Data cleaning: Remove unrealistic values (more than 24 hours = 1440 minutes)
     df_clean = df[df["avg_build_duration_min"] <= 1440].copy()
     if len(df_clean) < len(df):
@@ -1258,8 +1347,8 @@ def render_performance_insights(df):
     
     # Performance insights with modern styling
     st.markdown("""
-    <div class="chart-container">
-        <h3 style="margin: 0 0 1.5rem 0; color: var(--text-primary);">🎯 Performance Insights</h3>
+    <div class="section-header">
+        <h2>🎯 Performance Insights</h2>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1293,8 +1382,8 @@ def render_performance_insights(df):
     
     # Folder analysis with modern styling
     st.markdown("""
-    <div class="chart-container">
-        <h3 style="margin: 0 0 1.5rem 0; color: var(--text-primary);">📁 Performance by Folder</h3>
+    <div class="section-header">
+        <h2>📁 Performance by Folder</h2>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1330,8 +1419,8 @@ def render_performance_insights(df):
         
         # Show folder details with modern styling
         st.markdown("""
-        <div class="chart-container">
-            <h3 style="margin: 0 0 1.5rem 0; color: var(--text-primary);">📊 Folder Details</h3>
+        <div class="section-header">
+            <h2>📊 Folder Details</h2>
         </div>
         """, unsafe_allow_html=True)
         
