@@ -28,6 +28,7 @@ def init_db():
 def get_cached_data():
     conn = sqlite3.connect(DB_FILE)
     try:
+        # Get the data
         df = pd.read_sql_query(
             "SELECT name, url, type, last_build_status, last_build_url, folder, "
             "is_disabled, last_build_date, last_successful_date, last_failed_date, "
@@ -38,6 +39,11 @@ def get_cached_data():
             "total_build_duration FROM jenkins_items",
             conn,
         )
+        
+        # Get the timestamp of when data was last cached
+        timestamp_result = conn.execute("SELECT timestamp FROM jenkins_items LIMIT 1").fetchone()
+        last_sync_timestamp = timestamp_result[0] if timestamp_result else None
+        
         df["last_build_status"] = df["last_build_status"].fillna("Unknown")
         # Convert boolean columns
         df["is_disabled"] = df["is_disabled"].fillna(False).astype(bool)
@@ -52,9 +58,10 @@ def get_cached_data():
                           "min_build_duration", "max_build_duration", "total_build_duration"]
         for col in duration_columns:
             df[col] = df[col].fillna(0)
-        return df
+        
+        return df, last_sync_timestamp
     except (pd.io.sql.DatabaseError, sqlite3.OperationalError):
-        return None
+        return None, None
     finally:
         conn.close()
 

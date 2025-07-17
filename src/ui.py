@@ -306,36 +306,40 @@ def render_ui(df):
     # Modern header with gradient background - Single title only
     st.markdown("""
     <div class="modern-header">
-        <h1>🚀 Jenkins Dashboard</h1>
+        <h1>🚀 Jenkins Monitoring</h1>
         <p style="color: #ffffff;">Comprehensive CI/CD Pipeline Analytics & Monitoring</p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Create tab layout with settings gear
-    tab_col, gear_col = st.columns([0.95, 0.05])
+    # Create tab layout with sync button
+    tab_col, sync_col = st.columns([0.95, 0.05])
     
     with tab_col:
         # Use tabs for main navigation with enhanced styling
         main_tab1, main_tab2, main_tab3 = st.tabs([
-            "📊 Dashboard", 
+            "📊 Overview", 
             "🧹 Cleanup Insights", 
             "📈 Analytics"
         ])
     
-    with gear_col:
-        # Settings gear button - small and subtle
-        gear_clicked = st.button("⚙️", key="settings_gear", help="Settings", use_container_width=True)
-        if gear_clicked:
-            st.session_state.show_settings = True
+    with sync_col:
+        # Data sync button - small and subtle
+        sync_clicked = st.button("🔄", key="data_sync", help="Sync Data from Jenkins", use_container_width=True)
+        if sync_clicked:
+            st.session_state.show_sync_modal = True
             st.rerun()
     
-    # Settings modal appears below the tabs (full width)
-    if st.session_state.get('show_settings', False):
+    # Data sync modal appears below the tabs (full width)
+    if st.session_state.get('show_sync_modal', False):
         st.markdown("---")
-        st.markdown("### ⚙️ Settings")
+        st.markdown("### 🔄 Data Synchronization")
+        
+        # Show current data status
+        if hasattr(st.session_state, 'jobs_count') and hasattr(st.session_state, 'last_sync_time'):
+            st.info(f"📊 **Current Data**: {st.session_state.jobs_count} jobs loaded • Last updated: {st.session_state.last_sync_time}")
         
         # Warning message
-        st.warning("⚠️ **Data Sync Warning**: This will fetch fresh data from Jenkins and may take 30-60 seconds. Only use when you need the latest information.")
+        st.warning("⚠️ **Data Sync Warning**: This will fetch fresh data from Jenkins and may take some time. Only use when you need the latest information.")
         
         # Confirmation checkbox
         sync_confirmed = st.checkbox("I understand and want to sync data from Jenkins")
@@ -344,7 +348,6 @@ def render_ui(df):
         refresh_button = st.button(
             "🔄 Sync Latest Data from Jenkins", 
             disabled=not sync_confirmed,
-            help="Fetch the most recent job and pipeline data from Jenkins. This may take a few moments.",
             use_container_width=True
         )
         
@@ -352,12 +355,12 @@ def render_ui(df):
             st.info("🔄 Syncing data from Jenkins...")
             # Trigger data refresh by setting session state
             st.session_state.refresh_data = True
-            st.session_state.show_settings = False
+            st.session_state.show_sync_modal = False
             st.rerun()
         
         # Close button
-        if st.button("❌ Close Settings", use_container_width=True):
-            st.session_state.show_settings = False
+        if st.button("❌ Close", use_container_width=True):
+            st.session_state.show_sync_modal = False
             st.rerun()
         
         st.markdown("---")
@@ -386,7 +389,7 @@ def render_dashboard_tab(df):
     """, unsafe_allow_html=True)
     
     # Filter controls in horizontal layout - adjusted widths for better folder names
-    col1, col2, col3, col4 = st.columns([1.5, 2, 1, 0.8])
+    col1, col2, col3 = st.columns([1.5, 2, 1])
     
     with col1:
         # Smart search with autocomplete suggestions
@@ -416,11 +419,6 @@ def render_dashboard_tab(df):
             help="Select specific statuses to include (leave empty to show all)"
         )
     
-    with col4:
-        # Pagination controls
-        items_per_page = st.selectbox("📄 Items per page", [25, 50, 100, 200], 
-                                    index=[25, 50, 100, 200].index(DashboardConfig.ITEMS_PER_PAGE_DEFAULT))
-    
     # Advanced search options in an expander
     with st.expander("🔧 Advanced Search Options", expanded=False):
         adv_col1, adv_col2, adv_col3 = st.columns(3)
@@ -439,7 +437,7 @@ def render_dashboard_tab(df):
     render_enhanced_visualizations(filtered_df, len(filtered_df), total_items)
     
     # Enhanced data display with integrated pagination
-    render_enhanced_data_table(filtered_df, len(filtered_df), items_per_page)
+    render_enhanced_data_table(filtered_df, len(filtered_df))
 
 
 def apply_filters(df, search_term, name_filter, folder_filter, status_filter, 
@@ -632,23 +630,23 @@ def render_enhanced_visualizations(df, total_filtered_items, total_items):
         st.info("No data matches the current filters.")
 
 
-def render_enhanced_data_table(df, total_filtered_items, items_per_page):
+def render_enhanced_data_table(df, total_filtered_items):
     """Render enhanced data table with modern styling and integrated pagination"""
     # Enhanced pagination controls with modern styling
-    total_pages = (total_filtered_items + items_per_page - 1) // items_per_page
+    total_pages = (total_filtered_items + DashboardConfig.ITEMS_PER_PAGE_DEFAULT - 1) // DashboardConfig.ITEMS_PER_PAGE_DEFAULT
     
     if total_pages > 1:
         current_page = 1
     else:
         current_page = 1
     
-    start_idx = (current_page - 1) * items_per_page
-    end_idx = start_idx + items_per_page
+    start_idx = (current_page - 1) * DashboardConfig.ITEMS_PER_PAGE_DEFAULT
+    end_idx = start_idx + DashboardConfig.ITEMS_PER_PAGE_DEFAULT
     paginated_df = df.iloc[start_idx:end_idx]
     
     # Summary info with modern styling
-    start_item = (current_page - 1) * items_per_page + 1
-    end_item = min(current_page * items_per_page, total_filtered_items)
+    start_item = (current_page - 1) * DashboardConfig.ITEMS_PER_PAGE_DEFAULT + 1
+    end_item = min(current_page * DashboardConfig.ITEMS_PER_PAGE_DEFAULT, total_filtered_items)
     
     if not paginated_df.empty:
         # Enhanced dataframe with modern styling
@@ -658,20 +656,34 @@ def render_enhanced_data_table(df, total_filtered_items, items_per_page):
         </div>
         """, unsafe_allow_html=True)
         
-        # Page changing controls inside Jobs Data section
+        # Items per page and page controls side by side
+        col1, col2, col3, col4 = st.columns([0.2, 0.15, 0.1, 0.55])
+        with col1:
+            items_per_page = st.selectbox("📄 Items per page", [25, 50, 100, 200], 
+                                        index=[25, 50, 100, 200].index(DashboardConfig.ITEMS_PER_PAGE_DEFAULT))
+        
+        # Page changing controls (only show if multiple pages)
         if total_pages > 1:
-            col1, col2, col3, col4 = st.columns([2, 1, 1, 2])
             with col2:
                 current_page = st.selectbox(f"📄 Page", range(1, total_pages + 1), index=0)
             with col3:
                 st.write(f"of {total_pages}")
-            
-            # Recalculate pagination after page selection
-            start_idx = (current_page - 1) * items_per_page
-            end_idx = start_idx + items_per_page
-            paginated_df = df.iloc[start_idx:end_idx]
-            start_item = (current_page - 1) * items_per_page + 1
-            end_item = min(current_page * items_per_page, total_filtered_items)
+            with col4:
+                st.write("")  # Empty space for balance
+        else:
+            with col2:
+                st.write("")  # Empty space when no pagination needed
+            with col3:
+                st.write("")
+            with col4:
+                st.write("")
+        
+        # Recalculate pagination after page selection
+        start_idx = (current_page - 1) * items_per_page
+        end_idx = start_idx + items_per_page
+        paginated_df = df.iloc[start_idx:end_idx]
+        start_item = (current_page - 1) * items_per_page + 1
+        end_item = min(current_page * items_per_page, total_filtered_items)
         
         st.info(f"Showing {start_item}-{end_item} of {total_filtered_items} jobs")
         

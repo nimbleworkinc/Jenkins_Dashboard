@@ -23,12 +23,17 @@ st.set_page_config(layout=DashboardConfig.PAGE_LAYOUT)
 init_db()
 
 # --- Main App Logic ---
-df = get_cached_data()
+df, last_sync_timestamp = get_cached_data()
 
-# Data status display
+# Store last sync time in session state for use in UI
 if df is not None and not df.empty:
-    # Show data status in a subtle way
-    st.caption(f"📊 {len(df)} jobs loaded • Last updated: {pd.Timestamp.now().strftime('%H:%M')}")
+    if last_sync_timestamp:
+        # Convert to IST (UTC+5:30)
+        last_sync_time = pd.Timestamp.fromtimestamp(last_sync_timestamp, tz='UTC').tz_convert('Asia/Kolkata').strftime('%d %b %H:%M IST')
+    else:
+        last_sync_time = "Unknown"
+    st.session_state.last_sync_time = last_sync_time
+    st.session_state.jobs_count = len(df)
 
 # Check if we need to fetch data (no cached data or refresh requested)
 if df is None or df.empty or st.session_state.get('refresh_data', False):
@@ -40,19 +45,25 @@ if df is None or df.empty or st.session_state.get('refresh_data', False):
     auth = HTTPBasicAuth(DashboardConfig.JENKINS_USER, DashboardConfig.JENKINS_TOKEN)
     
     with st.spinner("Fetching all jobs and pipelines... this may take a moment."):
-        all_items = get_all_jenkins_items(DashboardConfig.JENKINS_BASE_URL, auth)
-        if all_items:
-            df = pd.DataFrame(all_items)
-            cache_data(df)
-            # Clear the refresh flag
-            if 'refresh_data' in st.session_state:
-                del st.session_state.refresh_data
-            st.success(f"✅ Successfully synced {len(df)} jobs from Jenkins!")
-            st.info("🔄 Refreshing dashboard with latest data...")
-            st.rerun()
-        else:
-            st.warning("No items found or an error occurred.")
+        # Suppress the function call display by using a try-except wrapper
+        try:
+            all_items = get_all_jenkins_items(DashboardConfig.JENKINS_BASE_URL, auth)
+        except Exception as e:
+            st.error(f"Error fetching data: {e}")
             st.stop()
+    
+    if all_items:
+        df = pd.DataFrame(all_items)
+        cache_data(df)
+        # Clear the refresh flag
+        if 'refresh_data' in st.session_state:
+            del st.session_state.refresh_data
+        st.success(f"✅ Successfully synced {len(df)} jobs from Jenkins!")
+        st.info("🔄 Refreshing dashboard with latest data...")
+        st.rerun()
+    else:
+        st.warning("No items found or an error occurred.")
+        st.stop()
 
 if df is None or df.empty:
     st.warning("No data to display. Please refresh from Jenkins.")

@@ -37,7 +37,7 @@ def is_test_job(job_name):
     return False
 
 
-@st.cache_data
+@st.cache_data(show_spinner=False)
 def get_all_jenkins_items(url, _auth):
     items = []
     # Enhanced API call to get more detailed information including build duration
