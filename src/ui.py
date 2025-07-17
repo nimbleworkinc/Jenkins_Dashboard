@@ -945,10 +945,17 @@ def render_analytics_tab(df):
         st.warning("No build duration data available. Please refresh the data to see analytics.")
         return
     
+    # Convert duration from milliseconds to minutes for better readability
+    jobs_with_duration["avg_build_duration_min"] = jobs_with_duration["avg_build_duration"] / 60000
+    jobs_with_duration["last_build_duration_min"] = jobs_with_duration["last_build_duration"] / 60000
+    jobs_with_duration["avg_successful_duration_min"] = jobs_with_duration["avg_successful_duration"] / 60000
+    jobs_with_duration["avg_failed_duration_min"] = jobs_with_duration["avg_failed_duration"] / 60000
+    
     # Create sub-tabs with modern styling
-    analytics_tab1, analytics_tab2 = st.tabs([
+    analytics_tab1, analytics_tab2, analytics_tab3 = st.tabs([
         "⏱️ Build Duration Analysis", 
-        "📊 Performance Insights"
+        "📊 Performance Insights",
+        "🔍 Outlier Analysis"
     ])
     
     with analytics_tab1:
@@ -956,22 +963,18 @@ def render_analytics_tab(df):
     
     with analytics_tab2:
         render_performance_insights(jobs_with_duration)
+    
+    with analytics_tab3:
+        render_outlier_analysis(jobs_with_duration, jobs_with_duration)
 
 
 def render_build_duration_analysis(df):
     """Render build duration analysis with modern styling and enhanced charts"""
     
-    # Convert duration from milliseconds to minutes for better readability
-    df["avg_build_duration_min"] = df["avg_build_duration"] / 60000
-    df["last_build_duration_min"] = df["last_build_duration"] / 60000
-    df["avg_successful_duration_min"] = df["avg_successful_duration"] / 60000
-    df["avg_failed_duration_min"] = df["avg_failed_duration"] / 60000
-    
     # Data cleaning: Remove unrealistic values (more than 24 hours = 1440 minutes)
     df_clean = df[df["avg_build_duration_min"] <= 1440].copy()
     
     if len(df_clean) < len(df):
-        st.warning(f"⚠️ Removed {len(df) - len(df_clean)} jobs with unrealistic build durations (>24 hours)")
         df = df_clean
     
     # Duration statistics with modern styling
@@ -1105,6 +1108,89 @@ def render_build_duration_analysis(df):
         },
         use_container_width=True
     )
+
+
+def render_outlier_analysis(df_clean, df_original):
+    """Render outlier analysis with explanations and recommendations"""
+    st.markdown("""
+    <div class="section-header">
+        <h2>🔍 Outlier Analysis</h2>
+        <p>Jobs with unusual characteristics that may need attention</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Find outliers (jobs with unrealistic build durations)
+    outliers = df_clean[df_clean["avg_build_duration_min"] > 1440].copy()
+    
+    if not outliers.empty:
+        st.warning(f"⚠️ Found {len(outliers)} jobs with unrealistic build durations (>24 hours)")
+        
+        # Add analysis and recommendations
+        outliers["outlier_type"] = outliers.apply(analyze_outlier_reason, axis=1)
+        outliers["recommendation"] = outliers.apply(get_outlier_recommendation, axis=1)
+        
+        # Display outliers table
+        st.markdown("""
+        <div class="section-header">
+            <h2>🐌 Unusually Long Build Jobs</h2>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.dataframe(
+            outliers[["name", "folder", "avg_build_duration_min", "last_build_status", "total_builds", "outlier_type", "recommendation", "url"]],
+            column_config={
+                "url": st.column_config.LinkColumn("🔗 Job URL"),
+                "avg_build_duration_min": st.column_config.NumberColumn("Avg Duration (hrs)", format="%.1f"),
+                "total_builds": st.column_config.NumberColumn("Total Builds", format="%d"),
+            },
+            use_container_width=True
+        )
+        
+        # Summary insights
+        st.markdown("""
+        <div class="section-header">
+            <h2>💡 Outlier Insights</h2>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        outlier_types = outliers["outlier_type"].value_counts()
+        for outlier_type, count in outlier_types.items():
+            st.info(f"**{outlier_type}**: {count} jobs")
+            
+    else:
+        st.success("🎉 No outliers found! All jobs have realistic build durations.")
+
+
+def analyze_outlier_reason(row):
+    """Analyze why a job might be an outlier"""
+    duration_hrs = row["avg_build_duration_min"] / 60
+    
+    if duration_hrs > 168:  # More than 1 week
+        return "🚨 Extremely Long Build (>1 week)"
+    elif duration_hrs > 72:  # More than 3 days
+        return "⚠️ Very Long Build (3+ days)"
+    elif duration_hrs > 48:  # More than 2 days
+        return "🐌 Long Build (2+ days)"
+    elif duration_hrs > 24:  # More than 1 day
+        return "⏰ Extended Build (1+ day)"
+    else:
+        return "📊 Unusual Build Duration"
+
+
+def get_outlier_recommendation(row):
+    """Get recommendation for outlier job"""
+    duration_hrs = row["avg_build_duration_min"] / 60
+    
+    if duration_hrs > 168:
+        return "🔧 Investigate immediately - likely stuck or misconfigured"
+    elif duration_hrs > 72:
+        return "📋 Review build process - consider optimization or parallelization"
+    elif duration_hrs > 48:
+        return "👀 Monitor closely - may need process improvements"
+    elif duration_hrs > 24:
+        return "📊 Analyze build steps - look for optimization opportunities"
+    else:
+        return "🔍 Review build configuration"
 
 
 def render_performance_insights(df):
