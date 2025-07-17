@@ -19,7 +19,6 @@ except ValueError as e:
     st.stop()
 
 st.set_page_config(layout=DashboardConfig.PAGE_LAYOUT)
-st.title(DashboardConfig.DASHBOARD_TITLE)
 
 init_db()
 

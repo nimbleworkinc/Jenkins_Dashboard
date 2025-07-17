@@ -1,23 +1,262 @@
 import streamlit as st
 import plotly.express as px
+import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import pandas as pd
 from src.config import DashboardConfig
 
+# Custom CSS for modern styling
+def load_custom_css():
+    st.markdown("""
+    <style>
+    /* Modern Color Palette - Clean White-Black-Grey Theme with Better Contrast */
+    :root {
+        --primary-color: #000000;
+        --primary-dark: #000000;
+        --secondary-color: #1f2937;
+        --accent-color: #3b82f6;
+        --success-color: #059669;
+        --warning-color: #d97706;
+        --error-color: #dc2626;
+        --background-light: #f3f4f6;
+        --background-dark: #1f2937;
+        --text-primary: #000000;
+        --text-secondary: #374151;
+        --border-color: #d1d5db;
+        --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    }
+    
+    /* Global Styles */
+    .main {
+        background: #1f2937;
+        min-height: 100vh;
+    }
+    
+    .stApp {
+        background: #1f2937;
+    }
+    
+    /* Modern Header */
+    .modern-header {
+        padding: 1rem 2rem;
+        margin: 0.5rem 0;
+    }
+    
+    .modern-header h1 {
+        color: #ffffff;
+        font-size: 3.5rem;
+        font-weight: 800;
+        margin: 0;
+        text-align: center;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    
+    .modern-header p {
+        color: #e5e7eb;
+        text-align: center;
+        margin: 0.5rem 0 0 0;
+        font-size: 1.1rem;
+    }
+    
+    /* Modern Navigation */
+    .nav-container {
+        margin: 1rem 0;
+    }
+    
+    /* Simple Section Headers */
+    .section-header {
+        color: #ffffff;
+        font-size: 1.6rem;
+        font-weight: 600;
+        margin: 2rem 0 1rem 0;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #ffffff;
+    }
+    
+    .section-header h2 {
+        margin: 0;
+        color: #ffffff;
+        font-size: 1.6rem;
+        font-weight: 600;
+    }
+    
+    .section-header p {
+        color: #e5e7eb;
+        margin: 0.5rem 0 0 0;
+        font-size: 1rem;
+        font-weight: 400;
+    }
+    
+    /* Enhanced Sidebar */
+    .sidebar .sidebar-content {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem;
+        box-shadow: var(--card-shadow);
+        border: 1px solid var(--border-color);
+    }
+    
+    /* Custom Metric Styling - Fixed for better visibility */
+    .stMetric {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--card-shadow);
+    }
+    
+    .stMetric > div {
+        color: #000000 !important;
+    }
+    
+    .stMetric label {
+        color: #000000 !important;
+        font-weight: 600 !important;
+    }
+    
+    .stMetric [data-testid="metric-container"] {
+        color: #000000 !important;
+    }
+    
+    /* Enhanced Charts */
+    .chart-container {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        box-shadow: var(--card-shadow);
+        border: 1px solid var(--border-color);
+    }
+    
+    /* Status Badges */
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .status-success {
+        background: rgba(5, 150, 105, 0.1);
+        color: var(--success-color);
+        border: 1px solid rgba(5, 150, 105, 0.2);
+    }
+    
+    .status-failure {
+        background: rgba(220, 38, 38, 0.1);
+        color: var(--error-color);
+        border: 1px solid rgba(220, 38, 38, 0.2);
+    }
+    
+    .status-unstable {
+        background: rgba(217, 119, 6, 0.1);
+        color: var(--warning-color);
+        border: 1px solid rgba(217, 119, 6, 0.2);
+    }
+    
+    /* Loading Animation */
+    .loading-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(0, 0, 0, 0.1);
+        border-radius: 50%;
+        border-top-color: var(--accent-color);
+        animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .modern-header h1 {
+            font-size: 2rem;
+        }
+        
+        .section-header {
+            font-size: 1.5rem;
+        }
+    }
+    
+    /* Fix Streamlit Tab Text Visibility */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.5rem;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        background-color: white;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border-color);
+        color: #000000 !important;
+        font-weight: 500;
+    }
+    
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: #f9fafb;
+        color: #000000 !important;
+    }
+    
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background-color: #1f2937;
+        color: white !important;
+        border-color: #1f2937;
+    }
+    
+    .stTabs [data-baseweb="tab"] span {
+        color: inherit !important;
+    }
+    
+    /* Fix radio button text visibility */
+    .stRadio > label {
+        color: #000000 !important;
+        font-weight: 500 !important;
+    }
+    
+    .stRadio > div > div > div > label {
+        color: #000000 !important;
+        font-weight: 500 !important;
+    }
+    
+    /* Fix any other text elements that might be light */
+    .stMarkdown, .stText {
+        color: #ffffff !important;
+    }
+    
+    .stMarkdown p, .stText p {
+        color: #e5e7eb !important;
+    }
+    
+    /* Make bullet points and lists more visible */
+    .stMarkdown ul, .stMarkdown ol {
+        color: #e5e7eb !important;
+    }
+    
+    .stMarkdown li {
+        color: #e5e7eb !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 
 def render_ui(df):
-    # Main header with better styling
+    # Load custom CSS
+    load_custom_css()
+    
+    # Modern header with gradient background - Single title only
     st.markdown("""
-    <div style="text-align: center; padding: 20px 0; background: linear-gradient(90deg, #1f77b4, #ff7f0e); border-radius: 10px; margin-bottom: 30px;">
-        <h1 style="color: white; margin: 0; font-size: 2.5em;">🚀 Jenkins Dashboard</h1>
-        <p style="color: white; margin: 5px 0 0 0; font-size: 1.1em;">Comprehensive CI/CD Pipeline Analytics</p>
+    <div class="modern-header">
+        <h1>🚀 Jenkins Dashboard</h1>
+        <p style="color: #ffffff;">Comprehensive CI/CD Pipeline Analytics & Monitoring</p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Create main navigation with better spacing
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    # Use radio buttons for main navigation with better styling
+    # Use radio buttons for main navigation with enhanced styling
     main_nav = st.radio(
         "**Main Navigation**",
         ["📊 Dashboard", "🧹 Cleanup Insights", "📈 Analytics"],
@@ -25,8 +264,8 @@ def render_ui(df):
         label_visibility="collapsed"
     )
     
-    # Add significant spacing between main nav and content
-    st.markdown("<br><br>", unsafe_allow_html=True)
+    # Add spacing between nav and content
+    st.markdown("<br>", unsafe_allow_html=True)
     
     # Render content based on selection
     if main_nav == "📊 Dashboard":
@@ -38,19 +277,12 @@ def render_ui(df):
 
 
 def render_dashboard_tab(df):
-    """Render the main dashboard with enhanced styling"""
-    st.markdown("""
-    <div style="background: #f0f2f6; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
-        <h2 style="margin: 0; color: #1f77b4;">📊 Dashboard Overview</h2>
-        <p style="margin: 10px 0 0 0; color: #666;">Monitor your Jenkins jobs and pipelines at a glance</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Enhanced sidebar with better organization
+    """Render the main dashboard with modern styling and enhanced visualizations"""
+    # Enhanced sidebar with modern styling
     with st.sidebar:
         st.markdown("""
-        <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="margin: 0; color: #1f77b4;">🔍 Search & Filters</h3>
+        <div style="background: white; border-radius: 12px; padding: 1.5rem; margin: 1rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); border: 1px solid #d1d5db;">
+            <h3 style="margin: 0 0 1rem 0; color: #000000;">🔍 Search & Filters</h3>
         </div>
         """, unsafe_allow_html=True)
         
@@ -70,8 +302,8 @@ def render_dashboard_tab(df):
         st.markdown("---")
         
         st.markdown("""
-        <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="margin: 0; color: #1f77b4;">📂 Quick Filters</h3>
+        <div style="background: white; border-radius: 12px; padding: 1.5rem; margin: 1rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); border: 1px solid #d1d5db;">
+            <h3 style="margin: 0 0 1rem 0; color: #000000;">📂 Quick Filters</h3>
         </div>
         """, unsafe_allow_html=True)
         
@@ -97,8 +329,8 @@ def render_dashboard_tab(df):
         st.markdown("---")
         
         st.markdown("""
-        <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="margin: 0; color: #1f77b4;">📄 Pagination</h3>
+        <div style="background: white; border-radius: 12px; padding: 1.5rem; margin: 1rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); border: 1px solid #d1d5db;">
+            <h3 style="margin: 0 0 1rem 0; color: #000000;">📄 Pagination</h3>
         </div>
         """, unsafe_allow_html=True)
         
@@ -109,8 +341,8 @@ def render_dashboard_tab(df):
         st.markdown("---")
         
         st.markdown("""
-        <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="margin: 0; color: #1f77b4;">📊 Current Filters</h3>
+        <div style="background: white; border-radius: 12px; padding: 1.5rem; margin: 1rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); border: 1px solid #d1d5db;">
+            <h3 style="margin: 0 0 1rem 0; color: #000000;">📊 Current Filters</h3>
         </div>
         """, unsafe_allow_html=True)
         
@@ -129,7 +361,7 @@ def render_dashboard_tab(df):
     filtered_df = apply_filters(df, search_term, name_filter, folder_filter, status_filter, 
                                folder_filter_multiselect, status_filter_multiselect, [])
     
-    # Enhanced visualizations
+    # Enhanced visualizations with modern styling
     render_enhanced_visualizations(filtered_df, len(filtered_df), total_items)
     
     # Enhanced data display with integrated pagination
@@ -169,72 +401,158 @@ def apply_filters(df, search_term, name_filter, folder_filter, status_filter,
 
 
 def render_enhanced_visualizations(df, total_filtered_items, total_items):
-    """Render enhanced visualizations with better styling"""
-    st.header("📊 Build Status Overview")
-    
+    """Render enhanced visualizations with modern styling and better charts"""
     if not df.empty:
-        # KPI Cards
+        # Simple header without card
+        st.markdown("""
+        <div class="section-header">
+            <h2>🎯 Key Performance Indicators</h2>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # KPI Cards with equal size and center alignment
         col1, col2, col3, col4 = st.columns(4)
+        
+        # Custom CSS for equal-sized KPI cards
+        st.markdown("""
+        <style>
+        .stMetric {
+            text-align: center !important;
+            height: 120px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }
+        .stMetric > div {
+            text-align: center !important;
+        }
+        .stMetric label {
+            text-align: center !important;
+            justify-content: center !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
         
         with col1:
             success_count = len(df[df["last_build_status"] == "SUCCESS"])
             success_rate = (success_count / len(df)) * 100 if len(df) > 0 else 0
-            st.metric("✅ Success Rate", f"{success_rate:.1f}%", f"{success_count} jobs")
+            st.metric(
+                "✅ Success Rate", 
+                f"{success_rate:.1f}%", 
+                f"{success_count} jobs",
+                delta_color="normal"
+            )
         
         with col2:
             failure_count = len(df[df["last_build_status"] == "FAILURE"])
             failure_rate = (failure_count / len(df)) * 100 if len(df) > 0 else 0
-            st.metric("❌ Failure Rate", f"{failure_rate:.1f}%", f"{failure_count} jobs")
+            st.metric(
+                "❌ Failure Rate", 
+                f"{failure_rate:.1f}%", 
+                f"{failure_count} jobs",
+                delta_color="inverse"
+            )
         
         with col3:
             inactive_count = len(df[df["days_since_last_build"] > DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS]) if "days_since_last_build" in df.columns else 0
-            st.metric("⏰ Inactive Jobs", inactive_count, f">{DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS} days")
+            st.metric(
+                "⏰ Inactive Jobs", 
+                inactive_count, 
+                f">{DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS} days",
+                delta_color="normal"
+            )
         
         with col4:
             disabled_count = len(df[df["is_disabled"] == True]) if "is_disabled" in df.columns else 0
-            st.metric("🚫 Disabled Jobs", disabled_count)
+            st.metric(
+                "🚫 Disabled Jobs", 
+                disabled_count,
+                delta_color="normal"
+            )
         
-        # Show filtered vs total info
+        # Show filtered vs total info with modern styling
         if total_filtered_items != total_items:
             st.info(f"📊 Showing {total_filtered_items} of {total_items} total jobs (filtered)")
         else:
             st.info(f"📊 Showing all {total_items} jobs")
         
-        # Enhanced pie chart
+        # Enhanced pie chart with modern styling
+        st.markdown("""
+        <div class="section-header">
+            <h2>📈 Build Status Distribution</h2>
+        </div>
+        """, unsafe_allow_html=True)
+        
         status_counts = df["last_build_status"].value_counts()
-        fig = px.pie(
-            status_counts,
+        
+        # Create enhanced pie chart with custom colors
+        fig = go.Figure(data=[go.Pie(
+            labels=status_counts.index,
             values=status_counts.values,
-            names=status_counts.index,
-            title=f"Build Status Distribution ({total_filtered_items} jobs)",
-            color_discrete_map={
-                "SUCCESS": "#00FF00",
-                "FAILURE": "#FF0000", 
-                "UNSTABLE": "#FFFF00",
-                "ABORTED": "#808080",
-                "IN_PROGRESS": "#0000FF",
-                "Not Built": "#FFA500"
-            }
+            hole=0.4,
+            marker_colors=['#059669', '#dc2626', '#d97706', '#3b82f6', '#8b5cf6'],
+            textinfo='label+percent',
+            textfont_size=14,
+            hoverinfo='label+value+percent'
+        )])
+        
+        fig.update_layout(
+            title="Build Status Distribution",
+            showlegend=True,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            ),
+            height=400,
+            margin=dict(t=50, b=50, l=50, r=50)
         )
-        fig.update_traces(textposition='inside', textinfo='percent+label')
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Enhanced bar chart for folder distribution
+        st.markdown("""
+        <div class="section-header">
+            <h2>📁 Jobs by Folder</h2>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        folder_counts = df["folder"].value_counts().head(10)
+        
+        fig = go.Figure(data=[go.Bar(
+            x=folder_counts.values,
+            y=folder_counts.index,
+            orientation='h',
+            marker_color='#000000',
+            marker_line_color='#000000',
+            marker_line_width=1,
+            opacity=0.8
+        )])
+        
+        fig.update_layout(
+            title="Top 10 Folders by Job Count",
+            xaxis_title="Number of Jobs",
+            yaxis_title="Folder",
+            height=400,
+            margin=dict(t=50, b=50, l=150, r=50),
+            showlegend=False
+        )
+        
         st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("No data matches the current filters.")
 
 
 def render_enhanced_data_table(df, total_filtered_items, items_per_page):
-    """Render enhanced data table with integrated pagination and cleaner columns"""
-    st.header("📋 Jenkins Jobs")
-    
-    # Pagination controls integrated near the table
+    """Render enhanced data table with modern styling and integrated pagination"""
+    # Enhanced pagination controls with modern styling
     total_pages = (total_filtered_items + items_per_page - 1) // items_per_page
     
     if total_pages > 1:
-        col1, col2, col3, col4 = st.columns([2, 1, 1, 2])
-        with col2:
-            current_page = st.selectbox(f"📄 Page", range(1, total_pages + 1), index=0)
-        with col3:
-            st.write(f"of {total_pages}")
+        current_page = 1
     else:
         current_page = 1
     
@@ -242,13 +560,35 @@ def render_enhanced_data_table(df, total_filtered_items, items_per_page):
     end_idx = start_idx + items_per_page
     paginated_df = df.iloc[start_idx:end_idx]
     
-    # Summary info
+    # Summary info with modern styling
     start_item = (current_page - 1) * items_per_page + 1
     end_item = min(current_page * items_per_page, total_filtered_items)
     
-    st.info(f"Showing {start_item}-{end_item} of {total_filtered_items} jobs")
-    
     if not paginated_df.empty:
+        # Enhanced dataframe with modern styling
+        st.markdown("""
+        <div class="section-header">
+            <h2>📊 Jobs Data</h2>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Page changing controls inside Jobs Data section
+        if total_pages > 1:
+            col1, col2, col3, col4 = st.columns([2, 1, 1, 2])
+            with col2:
+                current_page = st.selectbox(f"📄 Page", range(1, total_pages + 1), index=0)
+            with col3:
+                st.write(f"of {total_pages}")
+            
+            # Recalculate pagination after page selection
+            start_idx = (current_page - 1) * items_per_page
+            end_idx = start_idx + items_per_page
+            paginated_df = df.iloc[start_idx:end_idx]
+            start_item = (current_page - 1) * items_per_page + 1
+            end_item = min(current_page * items_per_page, total_filtered_items)
+        
+        st.info(f"Showing {start_item}-{end_item} of {total_filtered_items} jobs")
+        
         # Select only the columns we want to display
         display_columns = [
             "name", "folder", "last_build_status", "success_rate",
@@ -258,7 +598,7 @@ def render_enhanced_data_table(df, total_filtered_items, items_per_page):
         # Filter dataframe to only show selected columns
         display_df = paginated_df[display_columns].copy()
         
-        # Enhanced dataframe with cleaner columns
+        # Enhanced dataframe with cleaner columns and modern styling
         st.dataframe(
             display_df,
             column_config={
@@ -294,52 +634,40 @@ def render_enhanced_data_table(df, total_filtered_items, items_per_page):
 
 
 def render_cleanup_tab(df):
-    """Render the cleanup insights tab with enhanced styling"""
-    st.markdown("""
-    <div style="background: #f0f2f6; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
-        <h2 style="margin: 0; color: #1f77b4;">🧹 Cleanup Insights</h2>
-        <p style="margin: 10px 0 0 0; color: #666;">Identify and manage test, inactive, and disabled jobs</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Create sub-tabs with better spacing
-    st.markdown("<br>", unsafe_allow_html=True)
-    
+    """Render the cleanup insights tab with modern styling and enhanced organization"""
+    # Create sub-tabs with modern styling
     cleanup_tab1, cleanup_tab2, cleanup_tab3, cleanup_tab4 = st.tabs([
+        "📊 Summary", 
         "🧪 Test Jobs", 
         "⏰ Inactive Jobs", 
-        "🚫 Disabled Jobs", 
-        "📋 Summary"
+        "🚫 Disabled Jobs"
     ])
     
-    # Add spacing between tabs and content
-    st.markdown("<br>", unsafe_allow_html=True)
-    
     with cleanup_tab1:
-        render_test_jobs_section(df)
+        render_cleanup_summary(df)
     
     with cleanup_tab2:
-        render_inactive_jobs_section(df)
+        render_test_jobs_section(df)
     
     with cleanup_tab3:
-        render_disabled_jobs_section(df)
+        render_inactive_jobs_section(df)
     
     with cleanup_tab4:
-        render_cleanup_summary(df)
+        render_disabled_jobs_section(df)
 
 
 def render_test_jobs_section(df):
     st.markdown("""
-    <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 20px;">
-        <h3 style="margin: 0; color: #856404;">🧪 Test Jobs</h3>
-        <p style="margin: 5px 0 0 0; color: #856404;">Jobs that appear to be test/demo/temporary pipelines</p>
+    <div class="section-header">
+        <h2>🧪 Test Jobs</h2>
+        <p>Jobs that appear to be test/demo/temporary pipelines</p>
     </div>
     """, unsafe_allow_html=True)
     
     test_jobs = df[df["is_test_job"] == True].copy()
     
     if not test_jobs.empty:
-        st.success(f"Found {len(test_jobs)} potential test jobs")
+        st.info(f"Found {len(test_jobs)} potential test jobs")
         
         # Add search for test jobs
         test_search = st.text_input("🔍 Search test jobs...", placeholder="Filter test jobs by name or folder")
@@ -370,9 +698,9 @@ def render_test_jobs_section(df):
 
 def render_inactive_jobs_section(df):
     st.markdown(f"""
-    <div style="background: #f8d7da; padding: 15px; border-radius: 8px; border-left: 4px solid #dc3545; margin-bottom: 20px;">
-        <h3 style="margin: 0; color: #721c24;">⏰ Inactive Jobs</h3>
-        <p style="margin: 5px 0 0 0; color: #721c24;">Jobs that haven't been triggered for {DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS}+ days</p>
+    <div class="section-header">
+        <h2>⏰ Inactive Jobs</h2>
+        <p>Jobs that haven't been triggered for {DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS}+ days</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -383,7 +711,7 @@ def render_inactive_jobs_section(df):
     ].copy()
     
     if not inactive_jobs.empty:
-        st.warning(f"Found {len(inactive_jobs)} inactive jobs")
+        st.info(f"Found {len(inactive_jobs)} inactive jobs")
         
         # Add search for inactive jobs
         inactive_search = st.text_input("🔍 Search inactive jobs...", placeholder="Filter inactive jobs by name or folder")
@@ -417,9 +745,9 @@ def render_inactive_jobs_section(df):
 
 def render_disabled_jobs_section(df):
     st.markdown("""
-    <div style="background: #e2e3e5; padding: 15px; border-radius: 8px; border-left: 4px solid #6c757d; margin-bottom: 20px;">
-        <h3 style="margin: 0; color: #495057;">🚫 Disabled Jobs</h3>
-        <p style="margin: 5px 0 0 0; color: #495057;">Jobs that are currently disabled</p>
+    <div class="section-header">
+        <h2>🚫 Disabled Jobs</h2>
+        <p>Jobs that are currently disabled</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -456,63 +784,138 @@ def render_disabled_jobs_section(df):
 
 
 def render_cleanup_summary(df):
+    """Render cleanup summary with modern styling and enhanced insights"""
+    
+    # Calculate cleanup metrics
+    test_jobs = df[df["is_test_job"] == True]
+    inactive_jobs = df[df["days_since_last_build"] > DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS] if "days_since_last_build" in df.columns else pd.DataFrame()
+    disabled_jobs = df[df["is_disabled"] == True] if "is_disabled" in df.columns else pd.DataFrame()
+    
+    # Enhanced KPI cards for cleanup summary
     st.markdown("""
-    <div style="background: #d1ecf1; padding: 15px; border-radius: 8px; border-left: 4px solid #17a2b8; margin-bottom: 20px;">
-        <h3 style="margin: 0; color: #0c5460;">📋 Cleanup Summary</h3>
-        <p style="margin: 5px 0 0 0; color: #0c5460;">Overview of jobs that may need attention</p>
+    <div class="section-header">
+        <h2>🎯 Cleanup Metrics</h2>
     </div>
     """, unsafe_allow_html=True)
     
-    # Calculate statistics
-    total_jobs = len(df)
-    test_jobs_count = len(df[df["is_test_job"] == True])
-    inactive_jobs_count = len(df[(df["days_since_last_build"] > DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS) & (df["days_since_last_build"].notna())])
-    disabled_jobs_count = len(df[df["is_disabled"] == True])
-    
-    # Create summary metrics with better styling
+    # Custom CSS for equal-sized KPI cards
     st.markdown("""
-    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-        <h4 style="margin: 0 0 15px 0; color: #495057;">📊 Summary Metrics</h4>
-    </div>
+    <style>
+    .stMetric {
+        text-align: center !important;
+        height: 120px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+    }
+    .stMetric > div {
+        text-align: center !important;
+    }
+    .stMetric label {
+        text-align: center !important;
+        justify-content: center !important;
+    }
+    </style>
     """, unsafe_allow_html=True)
     
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric("Total Jobs", total_jobs)
+        st.metric(
+            "🧪 Test Jobs", 
+            len(test_jobs),
+            f"{len(test_jobs)/len(df)*100:.1f}% of total",
+            delta_color="normal"
+        )
     
     with col2:
-        st.metric("Test Jobs", test_jobs_count, delta=f"{test_jobs_count/total_jobs*100:.1f}%")
+        st.metric(
+            "⏰ Inactive Jobs", 
+            len(inactive_jobs),
+            f">{DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS} days old",
+            delta_color="inverse"
+        )
     
     with col3:
-        st.metric("Inactive Jobs", inactive_jobs_count, delta=f"{inactive_jobs_count/total_jobs*100:.1f}%")
+        st.metric(
+            "🚫 Disabled Jobs", 
+            len(disabled_jobs),
+            f"{len(disabled_jobs)/len(df)*100:.1f}% of total",
+            delta_color="inverse"
+        )
     
     with col4:
-        st.metric("Disabled Jobs", disabled_jobs_count, delta=f"{disabled_jobs_count/total_jobs*100:.1f}%")
+        total_cleanup_candidates = len(test_jobs) + len(inactive_jobs) + len(disabled_jobs)
+        st.metric(
+            "📋 Total Candidates", 
+            total_cleanup_candidates,
+            f"{total_cleanup_candidates/len(df)*100:.1f}% of total",
+            delta_color="inverse"
+        )
     
-    # Recommendations with better styling
+    # Cleanup recommendations with modern styling
     st.markdown("""
-    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-        <h4 style="margin: 0 0 15px 0; color: #495057;">🎯 Cleanup Recommendations</h4>
+    <div class="section-header">
+        <h2>💡 Cleanup Recommendations</h2>
     </div>
     """, unsafe_allow_html=True)
     
     recommendations = []
     
-    if test_jobs_count > 0:
-        recommendations.append(f"**{test_jobs_count} test jobs** found - Consider reviewing and removing obsolete test pipelines")
+    if len(test_jobs) > len(df) * 0.1:
+        recommendations.append("⚠️ **High number of test jobs** - Consider reviewing and removing outdated test jobs")
+    elif len(test_jobs) > 0:
+        recommendations.append("✅ **Test jobs under control** - Current test job count is manageable")
     
-    if inactive_jobs_count > 0:
-        recommendations.append(f"**{inactive_jobs_count} inactive jobs** found - Consider archiving or removing jobs not used for {DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS}+ days")
+    if len(inactive_jobs) > len(df) * 0.2:
+        recommendations.append("⚠️ **Many inactive jobs** - Consider archiving or removing jobs inactive for >60 days")
+    elif len(inactive_jobs) > 0:
+        recommendations.append("✅ **Inactive jobs manageable** - Consider reviewing long-inactive jobs")
     
-    if disabled_jobs_count > 0:
-        recommendations.append(f"**{disabled_jobs_count} disabled jobs** found - Review if these should be re-enabled or removed")
+    if len(disabled_jobs) > len(df) * 0.05:
+        recommendations.append("⚠️ **Several disabled jobs** - Review disabled jobs and remove if no longer needed")
+    elif len(disabled_jobs) > 0:
+        recommendations.append("✅ **Disabled jobs under control** - Current disabled job count is acceptable")
     
     if not recommendations:
-        st.success("🎉 Your Jenkins instance looks clean! No immediate cleanup actions needed.")
-    else:
-        for rec in recommendations:
-            st.markdown(f"• {rec}")
+        recommendations.append("🎉 **Excellent pipeline hygiene!** - Your Jenkins instance is well-maintained")
+    
+    for rec in recommendations:
+        st.markdown(f"• {rec}")
+    
+    # Cleanup progress visualization
+    st.markdown("""
+    <div class="section-header">
+        <h2>�� Cleanup Progress</h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Create cleanup progress chart
+    categories = ['Test Jobs', 'Inactive Jobs', 'Disabled Jobs', 'Active Jobs']
+    values = [len(test_jobs), len(inactive_jobs), len(disabled_jobs), 
+              len(df) - len(test_jobs) - len(inactive_jobs) - len(disabled_jobs)]
+    colors = ['#f59e0b', '#ef4444', '#8b5cf6', '#10b981']
+    
+    fig = go.Figure(data=[go.Bar(
+        x=categories,
+        y=values,
+        marker_color=colors,
+        marker_line_color='rgba(0,0,0,0.1)',
+        marker_line_width=1,
+        opacity=0.8
+    )])
+    
+    fig.update_layout(
+        title="Job Distribution by Cleanup Category",
+        xaxis_title="Job Category",
+        yaxis_title="Number of Jobs",
+        height=400,
+        margin=dict(t=50, b=50, l=50, r=50),
+        showlegend=False
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def get_test_job_recommendation(row):
@@ -544,14 +947,7 @@ def get_disabled_job_recommendation(row):
 
 
 def render_analytics_tab(df):
-    """Render the Analytics tab with practical build duration analysis and enhanced KPIs"""
-    st.markdown("""
-    <div style="background: #f0f2f6; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
-        <h2 style="margin: 0; color: #1f77b4;">📈 Jenkins Analytics</h2>
-        <p style="margin: 10px 0 0 0; color: #666;">Build performance analysis and optimization insights</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
+    """Render the Analytics tab with modern styling and enhanced visualizations"""
     # Filter out jobs without duration data
     jobs_with_duration = df[df["avg_build_duration"] > 0].copy()
     
@@ -559,28 +955,17 @@ def render_analytics_tab(df):
         st.warning("No build duration data available. Please refresh the data to see analytics.")
         return
     
-    # Create sub-tabs with better spacing
-    st.markdown("<br>", unsafe_allow_html=True)
-    
+    # Create sub-tabs with modern styling
     analytics_tab1, analytics_tab2 = st.tabs([
-        "⏱️ Build Duration Analysis", 
         "📊 Performance Insights"
     ])
     
-    # Add spacing between tabs and content
-    st.markdown("<br>", unsafe_allow_html=True)
-    
     with analytics_tab1:
-        render_build_duration_analysis(jobs_with_duration)
-    
-    with analytics_tab2:
         render_performance_insights(jobs_with_duration)
 
 
 def render_build_duration_analysis(df):
-    """Render build duration analysis with charts and insights"""
-    st.header("⏱️ Build Duration Analysis")
-    st.markdown("*Analyze build performance and identify optimization opportunities*")
+    """Render build duration analysis with modern styling and enhanced charts"""
     
     # Convert duration from milliseconds to minutes for better readability
     df["avg_build_duration_min"] = df["avg_build_duration"] / 60000
@@ -588,8 +973,12 @@ def render_build_duration_analysis(df):
     df["avg_successful_duration_min"] = df["avg_successful_duration"] / 60000
     df["avg_failed_duration_min"] = df["avg_failed_duration"] / 60000
     
-    # Duration statistics - simplified without extra styling
-    st.subheader("📊 Duration Statistics")
+    # Duration statistics with modern styling
+    st.markdown("""
+    <div class="section-header">
+        <h2>📊 Duration Statistics</h2>
+    </div>
+    """, unsafe_allow_html=True)
     
     col1, col2, col3, col4 = st.columns(4)
     
@@ -609,8 +998,12 @@ def render_build_duration_analysis(df):
         total_build_time = df["total_build_duration"].sum() / 60000 / 60  # Convert to hours
         st.metric("Total Build Time", f"{total_build_time:.1f} hours")
     
-    # Duration distribution chart
-    st.subheader("📊 Build Duration Distribution")
+    # Duration distribution chart with modern styling
+    st.markdown("""
+    <div class="section-header">
+        <h2>📊 Build Duration Distribution</h2>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Create duration bins
     df["duration_bin"] = pd.cut(df["avg_build_duration_min"], 
@@ -619,31 +1012,81 @@ def render_build_duration_analysis(df):
     
     duration_dist = df["duration_bin"].value_counts().sort_index()
     
-    fig = px.bar(
+    fig = go.Figure(data=[go.Bar(
         x=duration_dist.index,
         y=duration_dist.values,
+        marker_color='#6366f1',
+        marker_line_color='#4f46e5',
+        marker_line_width=1,
+        opacity=0.8
+    )])
+    
+    fig.update_layout(
         title="Distribution of Average Build Durations",
-        labels={"x": "Duration Range", "y": "Number of Jobs"}
+        xaxis_title="Duration Range",
+        yaxis_title="Number of Jobs",
+        height=400,
+        margin=dict(t=50, b=50, l=50, r=50),
+        showlegend=False
     )
-    fig.update_layout(showlegend=False)
+    
     st.plotly_chart(fig, use_container_width=True)
     
-    # Duration vs Success Rate scatter plot
-    st.subheader("📈 Duration vs Success Rate Correlation")
+    # Duration vs Success Rate scatter plot with modern styling
+    st.markdown("""
+    <div class="section-header">
+        <h2>📈 Duration vs Success Rate Correlation</h2>
+    </div>
+    """, unsafe_allow_html=True)
     
-    fig = px.scatter(
-        df,
-        x="avg_build_duration_min",
-        y="success_rate",
-        color="last_build_status",
-        hover_data=["name", "folder"],
+    # Create color mapping for status
+    color_map = {
+        'SUCCESS': '#10b981',
+        'FAILURE': '#ef4444',
+        'UNSTABLE': '#f59e0b',
+        'ABORTED': '#8b5cf6',
+        'IN_PROGRESS': '#06b6d4'
+    }
+    
+    fig = go.Figure()
+    
+    for status in df['last_build_status'].unique():
+        status_data = df[df['last_build_status'] == status]
+        fig.add_trace(go.Scatter(
+            x=status_data["avg_build_duration_min"],
+            y=status_data["success_rate"],
+            mode='markers',
+            name=status,
+            marker=dict(
+                color=color_map.get(status, '#6366f1'),
+                size=8,
+                opacity=0.7
+            ),
+            hovertemplate='<b>%{text}</b><br>' +
+                         'Duration: %{x:.1f} min<br>' +
+                         'Success Rate: %{y:.1f}%<br>' +
+                         'Status: ' + status +
+                         '<extra></extra>',
+            text=status_data['name']
+        ))
+    
+    fig.update_layout(
         title="Build Duration vs Success Rate",
-        labels={"avg_build_duration_min": "Average Build Duration (minutes)", "success_rate": "Success Rate (%)"}
+        xaxis_title="Average Build Duration (minutes)",
+        yaxis_title="Success Rate (%)",
+        height=500,
+        margin=dict(t=50, b=50, l=50, r=50),
+        hovermode='closest'
     )
+    
     st.plotly_chart(fig, use_container_width=True)
     
-    # Longest builds table
-    st.subheader("🐌 Longest Running Jobs")
+    # Longest builds table with modern styling
+    st.markdown("""
+    <div class="section-header">
+        <h2>🐌 Longest Running Jobs</h2>
+    </div>
+    """, unsafe_allow_html=True)
     
     longest_jobs = df.nlargest(10, "avg_build_duration_min")[["name", "folder", "avg_build_duration_min", "success_rate", "total_builds"]]
     
@@ -659,9 +1102,13 @@ def render_build_duration_analysis(df):
 
 
 def render_performance_insights(df):
-    """Render performance insights based on build duration data"""
-    st.header("📊 Performance Insights")
-    st.markdown("*Key insights from build duration data*")
+    """Render performance insights with modern styling and enhanced visualizations"""
+    st.markdown("""
+    <div class="section-header">
+        <h2>📊 Performance Insights</h2>
+        <p>Key insights and recommendations from build duration data</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Calculate insights
     total_jobs = len(df)
@@ -669,8 +1116,33 @@ def render_performance_insights(df):
     median_duration = df["avg_build_duration_min"].median()
     max_duration = df["avg_build_duration_min"].max()
     
-    # KPI Cards - simplified
-    st.subheader("📈 Key Metrics")
+    # KPI Cards with modern styling
+    st.markdown("""
+    <div class="section-header">
+        <h2>📈 Key Metrics</h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Custom CSS for equal-sized KPI cards
+    st.markdown("""
+    <style>
+    .stMetric {
+        text-align: center !important;
+        height: 120px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+    }
+    .stMetric > div {
+        text-align: center !important;
+    }
+    .stMetric label {
+        text-align: center !important;
+        justify-content: center !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     
     col1, col2, col3, col4 = st.columns(4)
     
@@ -687,8 +1159,12 @@ def render_performance_insights(df):
         total_build_time = df["total_build_duration"].sum() / 60000 / 60  # Convert to hours
         st.metric("Total Build Time", f"{total_build_time:.1f} hours")
     
-    # Performance insights - simplified
-    st.subheader("🎯 Performance Insights")
+    # Performance insights with modern styling
+    st.markdown("""
+    <div class="chart-container">
+        <h3 style="margin: 0 0 1.5rem 0; color: var(--text-primary);">🎯 Performance Insights</h3>
+    </div>
+    """, unsafe_allow_html=True)
     
     insights = []
     
@@ -718,8 +1194,12 @@ def render_performance_insights(df):
     for insight in insights:
         st.markdown(f"• {insight}")
     
-    # Folder analysis - simplified
-    st.subheader("📁 Performance by Folder")
+    # Folder analysis with modern styling
+    st.markdown("""
+    <div class="chart-container">
+        <h3 style="margin: 0 0 1.5rem 0; color: var(--text-primary);">📁 Performance by Folder</h3>
+    </div>
+    """, unsafe_allow_html=True)
     
     folder_performance = df.groupby("folder").agg({
         "avg_build_duration_min": "mean",
@@ -731,17 +1211,33 @@ def render_performance_insights(df):
     folder_performance = folder_performance[folder_performance["job_count"] >= 3].sort_values("avg_build_duration_min", ascending=False)
     
     if not folder_performance.empty:
-        fig = px.bar(
-            folder_performance,
+        fig = go.Figure(data=[go.Bar(
             x=folder_performance.index,
-            y="avg_build_duration_min",
+            y=folder_performance["avg_build_duration_min"],
+            marker_color='#8b5cf6',
+            marker_line_color='#7c3aed',
+            marker_line_width=1,
+            opacity=0.8
+        )])
+        
+        fig.update_layout(
             title="Average Build Duration by Folder",
-            labels={"avg_build_duration_min": "Duration (minutes)", "index": "Folder"}
+            xaxis_title="Folder",
+            yaxis_title="Duration (minutes)",
+            height=400,
+            margin=dict(t=50, b=50, l=50, r=50),
+            showlegend=False
         )
-        fig.update_layout(showlegend=False)
+        
         st.plotly_chart(fig, use_container_width=True)
         
-        # Show folder details
+        # Show folder details with modern styling
+        st.markdown("""
+        <div class="chart-container">
+            <h3 style="margin: 0 0 1.5rem 0; color: var(--text-primary);">📊 Folder Details</h3>
+        </div>
+        """, unsafe_allow_html=True)
+        
         st.dataframe(
             folder_performance,
             column_config={
