@@ -52,18 +52,18 @@ if df is None or df.empty or st.session_state.get('refresh_data', False):
             st.error(f"Error fetching data: {e}")
             st.stop()
     
-    if all_items:
-        df = pd.DataFrame(all_items)
-        cache_data(df)
-        # Clear the refresh flag
-        if 'refresh_data' in st.session_state:
-            del st.session_state.refresh_data
-        st.success(f"✅ Successfully synced {len(df)} jobs from Jenkins!")
-        st.info("🔄 Refreshing dashboard with latest data...")
-        st.rerun()
-    else:
-        st.warning("No items found or an error occurred.")
-        st.stop()
+        if all_items:
+            df = pd.DataFrame(all_items)
+            cache_data(df)
+            # Clear the refresh flag
+            if 'refresh_data' in st.session_state:
+                del st.session_state.refresh_data
+            st.success(f"✅ Successfully synced {len(df)} jobs from Jenkins!")
+            st.info("🔄 Refreshing dashboard with latest data...")
+            st.rerun()
+        else:
+            st.warning("No items found or an error occurred.")
+            st.stop()
 
 if df is None or df.empty:
     st.warning("No data to display. Please refresh from Jenkins.")

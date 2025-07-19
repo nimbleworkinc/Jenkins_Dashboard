@@ -304,9 +304,11 @@ def render_ui(df):
     load_custom_css()
     
     # Modern header with gradient background - Single title only
-    st.markdown("""
+    from src.config import DashboardConfig
+    
+    st.markdown(f"""
     <div class="modern-header">
-        <h1>🚀 Jenkins Monitoring</h1>
+        <h1>🚀 {DashboardConfig.DASHBOARD_TITLE}</h1>
         <p style="color: #ffffff;">Comprehensive CI/CD Pipeline Analytics & Monitoring</p>
     </div>
     """, unsafe_allow_html=True)
