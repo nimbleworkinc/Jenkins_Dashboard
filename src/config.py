@@ -41,13 +41,8 @@ class DashboardConfig:
     REFRESH_INTERVAL_SECONDS = safe_int_env("REFRESH_INTERVAL_SECONDS", 300)
     
     # Test Job Detection Settings
-    TEST_JOB_EXCLUDE_WORDS = os.getenv("TEST_JOB_EXCLUDE_WORDS", 
-        "latest,saastest,attest,contest,detest,protest,suggest,request,rest,nest,west,east,best,manifest,testament,testimony,testosterone,testicular,testify,testimonial,testable,tested"
-    ).split(",")
-    
-    TEST_JOB_KEYWORDS = os.getenv("TEST_JOB_KEYWORDS", 
-        "test,testing,tst,demo,trial,experiment"
-    ).split(",")
+    TEST_JOB_EXCLUDE_WORDS = os.getenv("TEST_JOB_EXCLUDE_WORDS", "").split(",") if os.getenv("TEST_JOB_EXCLUDE_WORDS") else []
+    TEST_JOB_KEYWORDS = os.getenv("TEST_JOB_KEYWORDS", "").split(",") if os.getenv("TEST_JOB_KEYWORDS") else []
     
     # Database Settings
     DB_FILE = os.getenv("DB_FILE", "db/jenkins_data.db")
