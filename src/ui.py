@@ -529,7 +529,7 @@ def render_enhanced_visualizations(df, total_filtered_items, total_items):
             )
         
         with col3:
-            inactive_count = len(df[df["days_since_last_build"] > DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS]) if "days_since_last_build" in df.columns else 0
+            inactive_count = len(df[df["days_since_last_build"].notna() & (df["days_since_last_build"] > DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS)]) if "days_since_last_build" in df.columns else 0
             st.metric(
                 "⏰ Inactive Jobs", 
                 inactive_count, 
@@ -888,7 +888,7 @@ def render_cleanup_summary(df):
     
     # Calculate cleanup metrics
     test_jobs = df[df["is_test_job"] == True]
-    inactive_jobs = df[df["days_since_last_build"] > DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS] if "days_since_last_build" in df.columns else pd.DataFrame()
+    inactive_jobs = df[df["days_since_last_build"].notna() & (df["days_since_last_build"] > DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS)] if "days_since_last_build" in df.columns else pd.DataFrame()
     disabled_jobs = df[df["is_disabled"] == True] if "is_disabled" in df.columns else pd.DataFrame()
     
     # Enhanced KPI cards for cleanup summary
@@ -1020,7 +1020,7 @@ def render_cleanup_summary(df):
 
 def get_test_job_recommendation(row):
     """Generate recommendation for test jobs based on their characteristics"""
-    if row["days_since_last_build"] and row["days_since_last_build"] > 30:
+    if pd.notna(row["days_since_last_build"]) and row["days_since_last_build"] > 30:
         return "🔄 Consider removing - inactive test job"
     elif row["total_builds"] < 5:
         return "⚠️ Review - low build count test job"
@@ -1030,9 +1030,9 @@ def get_test_job_recommendation(row):
 
 def get_inactive_job_recommendation(row):
     """Generate recommendation for inactive jobs"""
-    if row["days_since_last_build"] > 180:
+    if pd.notna(row["days_since_last_build"]) and row["days_since_last_build"] > 180:
         return "🗑️ Strong candidate for removal - very old"
-    elif row["days_since_last_build"] > 90:
+    elif pd.notna(row["days_since_last_build"]) and row["days_since_last_build"] > 90:
         return "📋 Review for archiving - moderately old"
     else:
         return "👀 Monitor - recently inactive"
@@ -1040,7 +1040,7 @@ def get_inactive_job_recommendation(row):
 
 def get_disabled_job_recommendation(row):
     """Generate recommendation for disabled jobs"""
-    if row["days_since_last_build"] and row["days_since_last_build"] > DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS:
+    if pd.notna(row["days_since_last_build"]) and row["days_since_last_build"] > DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS:
         return "🗑️ Consider removal - disabled and inactive"
     else:
         return "📋 Review - disabled but recently active"
@@ -1250,7 +1250,7 @@ def render_outlier_analysis(df_clean, df_original):
             outliers[["name", "folder", "avg_build_duration_min", "last_build_status", "total_builds", "outlier_type", "recommendation", "url"]],
             column_config={
                 "url": st.column_config.LinkColumn("🔗 Job URL"),
-                "avg_build_duration_min": st.column_config.NumberColumn("Avg Duration (hrs)", format="%.1f"),
+                "avg_build_duration_min": st.column_config.NumberColumn("Avg Duration (min)", format="%.1f"),
                 "total_builds": st.column_config.NumberColumn("Total Builds", format="%d"),
             },
             use_container_width=True

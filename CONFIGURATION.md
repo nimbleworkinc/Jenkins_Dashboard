@@ -6,6 +6,8 @@ The Jenkins Dashboard application uses a professional configuration management s
 
 **💡 Reusability**: This codebase is designed to be reused for different Jenkins instances. Simply update the `.env` file with different credentials and dashboard titles for each Jenkins server.
 
+**🔧 Single Source of Truth**: Default values are defined only in `config.py` to prevent inconsistencies. Environment variables in `.env` override these defaults when needed.
+
 ## Quick Setup
 
 1. **Copy the example environment file:**
@@ -45,16 +47,22 @@ DASHBOARD_TITLE=Jenkins Dashboard
 
 # Page layout (default: wide)
 PAGE_LAYOUT=wide
+
+# Timezone Settings
+TIMEZONE=UTC
+TIMEZONE_DISPLAY_FORMAT=%d %b %H:%M %Z
 ```
 
 ### Test Job Detection
 
 ```bash
 # Words to exclude from test job detection (comma-separated)
-TEST_JOB_EXCLUDE_WORDS=latest,saastest,attest,contest,detest,protest,suggest,request,rest,nest,west,east,best,manifest,testament,testimony,testosterone,testicular,testify,testimonial,testable,tested,nightly-test
+# Default values are defined in config.py - only override if needed
+# TEST_JOB_EXCLUDE_WORDS=latest,saastest,attest,contest,detest,protest,suggest,request,rest,nest,west,east,best,manifest,testament,testimony,testosterone,testicular,testify,testimonial,testable,tested
 
 # Keywords that indicate test jobs (comma-separated)
-TEST_JOB_KEYWORDS=test,testing,tst,demo,trial,experiment
+# Default values are defined in config.py - only override if needed
+# TEST_JOB_KEYWORDS=test,testing,tst,demo,trial,experiment
 ```
 
 ### Database and Storage
@@ -71,6 +79,8 @@ DB_FILE=db/jenkins_data.db
 INACTIVE_JOB_THRESHOLD_DAYS=30
 ITEMS_PER_PAGE_DEFAULT=25
 DASHBOARD_TITLE=Jenkins Dev Dashboard
+TIMEZONE=America/New_York
+TIMEZONE_DISPLAY_FORMAT=%d %b %H:%M %Z
 ```
 
 ### Production Environment
@@ -78,6 +88,8 @@ DASHBOARD_TITLE=Jenkins Dev Dashboard
 INACTIVE_JOB_THRESHOLD_DAYS=90
 ITEMS_PER_PAGE_DEFAULT=100
 DASHBOARD_TITLE=Jenkins Production Dashboard
+TIMEZONE=UTC
+TIMEZONE_DISPLAY_FORMAT=%d %b %H:%M %Z
 ```
 
 ### High-Traffic Jenkins
@@ -86,6 +98,36 @@ INACTIVE_JOB_THRESHOLD_DAYS=120
 ITEMS_PER_PAGE_DEFAULT=200
 REFRESH_INTERVAL_SECONDS=600
 DASHBOARD_TITLE=Jenkins Enterprise Dashboard
+TIMEZONE=Europe/London
+TIMEZONE_DISPLAY_FORMAT=%d %b %H:%M %Z
+```
+
+### Common Timezone Examples
+```bash
+# Universal Coordinated Time
+TIMEZONE=UTC
+
+# North America
+TIMEZONE=America/New_York      # Eastern Time
+TIMEZONE=America/Chicago       # Central Time
+TIMEZONE=America/Denver        # Mountain Time
+TIMEZONE=America/Los_Angeles   # Pacific Time
+
+# Europe
+TIMEZONE=Europe/London         # British Time
+TIMEZONE=Europe/Paris          # Central European Time
+TIMEZONE=Europe/Berlin         # Central European Time
+TIMEZONE=Europe/Moscow         # Moscow Time
+
+# Asia
+TIMEZONE=Asia/Tokyo            # Japan Standard Time
+TIMEZONE=Asia/Kolkata          # India Standard Time
+TIMEZONE=Asia/Shanghai         # China Standard Time
+TIMEZONE=Asia/Singapore        # Singapore Time
+
+# Australia
+TIMEZONE=Australia/Sydney      # Australian Eastern Time
+TIMEZONE=Australia/Perth       # Australian Western Time
 ```
 
 ## Feature-Specific Configuration
@@ -104,6 +146,8 @@ DASHBOARD_TITLE=Jenkins Enterprise Dashboard
 - **Dashboard Title**: Set `DASHBOARD_TITLE` for custom branding
 - **Page Layout**: Use `PAGE_LAYOUT=wide` for full-width display
 - **Items per Page**: Adjust `ITEMS_PER_PAGE_DEFAULT` for table pagination
+- **Timezone**: Configure `TIMEZONE` for local time display (e.g., `America/New_York`, `Europe/London`)
+- **Time Format**: Customize `TIMEZONE_DISPLAY_FORMAT` for timestamp display
 
 ## How to Change Configuration
 

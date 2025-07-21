@@ -28,8 +28,8 @@ df, last_sync_timestamp = get_cached_data()
 # Store last sync time in session state for use in UI
 if df is not None and not df.empty:
     if last_sync_timestamp:
-        # Convert to IST (UTC+5:30)
-        last_sync_time = pd.Timestamp.fromtimestamp(last_sync_timestamp, tz='UTC').tz_convert('Asia/Kolkata').strftime('%d %b %H:%M IST')
+        # Convert to configured timezone
+        last_sync_time = pd.Timestamp.fromtimestamp(last_sync_timestamp, tz='UTC').tz_convert(DashboardConfig.TIMEZONE).strftime(DashboardConfig.TIMEZONE_DISPLAY_FORMAT)
     else:
         last_sync_time = "Unknown"
     st.session_state.last_sync_time = last_sync_time

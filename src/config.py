@@ -4,6 +4,26 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv(override=True)
 
+def safe_int_env(env_var, default_value):
+    """
+    Safely convert environment variable to integer with error handling.
+    
+    Args:
+        env_var (str): Environment variable name
+        default_value (int): Default value to use if conversion fails
+        
+    Returns:
+        int: The converted value or default if conversion fails
+    """
+    try:
+        value = os.getenv(env_var)
+        if value is None:
+            return default_value
+        return int(value)
+    except (ValueError, TypeError):
+        print(f"⚠️ Warning: Invalid value for {env_var}. Using default: {default_value}")
+        return default_value
+
 class DashboardConfig:
     """
     Professional configuration management for Jenkins Dashboard.
@@ -16,9 +36,9 @@ class DashboardConfig:
     JENKINS_BASE_URL = os.getenv("JENKINS_BASE_URL")
     
     # Dashboard Display Settings
-    INACTIVE_JOB_THRESHOLD_DAYS = int(os.getenv("INACTIVE_JOB_THRESHOLD_DAYS", 60))
-    ITEMS_PER_PAGE_DEFAULT = int(os.getenv("ITEMS_PER_PAGE_DEFAULT", 50))
-    REFRESH_INTERVAL_SECONDS = int(os.getenv("REFRESH_INTERVAL_SECONDS", 300))
+    INACTIVE_JOB_THRESHOLD_DAYS = safe_int_env("INACTIVE_JOB_THRESHOLD_DAYS", 60)
+    ITEMS_PER_PAGE_DEFAULT = safe_int_env("ITEMS_PER_PAGE_DEFAULT", 50)
+    REFRESH_INTERVAL_SECONDS = safe_int_env("REFRESH_INTERVAL_SECONDS", 300)
     
     # Test Job Detection Settings
     TEST_JOB_EXCLUDE_WORDS = os.getenv("TEST_JOB_EXCLUDE_WORDS", 
@@ -33,8 +53,12 @@ class DashboardConfig:
     DB_FILE = os.getenv("DB_FILE", "db/jenkins_data.db")
     
     # UI Settings
-    DASHBOARD_TITLE = os.getenv("DASHBOARD_TITLE", "Jenkins Jobs and Pipelines Dashboard")
+    DASHBOARD_TITLE = os.getenv("DASHBOARD_TITLE", "Jenkins Dashboard")
     PAGE_LAYOUT = os.getenv("PAGE_LAYOUT", "wide")
+    
+    # Timezone Settings
+    TIMEZONE = os.getenv("TIMEZONE", "UTC")
+    TIMEZONE_DISPLAY_FORMAT = os.getenv("TIMEZONE_DISPLAY_FORMAT", "%d %b %H:%M %Z")
     
     @classmethod
     def validate_config(cls):
