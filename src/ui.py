@@ -231,7 +231,7 @@ def load_custom_css():
         color: white !important;
         border: 2px solid #ffffff;
     }
-    }
+}
     
     .stTabs [data-baseweb="tab"] span {
         color: inherit !important;
