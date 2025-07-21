@@ -26,7 +26,7 @@ Jenkins_Dashboard/
 ├── db/
 │   └── jenkins_data.db   # SQLite database for cached Jenkins data
 ├── .env                  # Environment variables (not in git)
-├── env_template.txt      # Environment variables template
+├── .env.example          # Environment variables template
 ├── main.py               # Application entry point
 ├── pyproject.toml        # Project dependencies and metadata
 ├── README.md             # This file
