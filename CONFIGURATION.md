@@ -10,7 +10,7 @@ The Jenkins Dashboard application uses a professional configuration management s
 
 1. **Copy the example environment file:**
    ```bash
-   cp env_template.txt .env
+cp .env.example .env
    ```
 
 2. **Edit your `.env` file** with your Jenkins credentials and preferences
