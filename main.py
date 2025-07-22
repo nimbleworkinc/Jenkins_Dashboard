@@ -6,36 +6,60 @@ from requests.auth import HTTPBasicAuth
 from src.data_manager import init_db, get_cached_data, cache_data
 from src.jenkins_api import get_all_jenkins_items
 from src.ui import render_ui
+from src.config import DashboardConfig
 
 load_dotenv()
 
-st.set_page_config(layout="wide")
-st.title("Jenkins Jobs and Pipelines Dashboard")
+# Validate configuration
+try:
+    DashboardConfig.validate_config()
+except ValueError as e:
+    st.error(f"Configuration Error: {e}")
+    st.error("Please check your .env file and ensure all required variables are set.")
+    st.stop()
+
+st.set_page_config(layout=DashboardConfig.PAGE_LAYOUT)
 
 init_db()
 
 # --- Main App Logic ---
-df = get_cached_data()
+df, last_sync_timestamp = get_cached_data()
 
-if st.sidebar.button("Refresh Data from Jenkins") or df is None or df.empty:
-    if df is None or df.empty:
+# Store last sync time in session state for use in UI
+if df is not None and not df.empty:
+    if last_sync_timestamp:
+        # Convert to configured timezone
+        last_sync_time = pd.Timestamp.fromtimestamp(last_sync_timestamp, tz='UTC').tz_convert(DashboardConfig.TIMEZONE).strftime(DashboardConfig.TIMEZONE_DISPLAY_FORMAT)
+    else:
+        last_sync_time = "Unknown"
+    st.session_state.last_sync_time = last_sync_time
+    st.session_state.jobs_count = len(df)
+
+# Check if we need to fetch data (no cached data or refresh requested)
+if df is None or df.empty or st.session_state.get('refresh_data', False):
+    if st.session_state.get('refresh_data', False):
+        st.info("🔄 Refreshing data from Jenkins...")
+    else:
         st.info("No cached data found. Fetching from Jenkins...")
 
-    jenkins_user = os.getenv("JENKINS_USER")
-    jenkins_token = os.getenv("JENKINS_TOKEN")
-
-    if not jenkins_user or not jenkins_token:
-        st.error("Jenkins credentials not found in .env file.")
-        st.stop()
-
-    auth = HTTPBasicAuth(jenkins_user, jenkins_token)
-    jenkins_base_url = os.getenv("JENKINS_BASE_URL")
+    auth = HTTPBasicAuth(DashboardConfig.JENKINS_USER, DashboardConfig.JENKINS_TOKEN)
+    
     with st.spinner("Fetching all jobs and pipelines... this may take a moment."):
-        all_items = get_all_jenkins_items(jenkins_base_url, auth)
+        # Suppress the function call display by using a try-except wrapper
+        try:
+            all_items = get_all_jenkins_items(DashboardConfig.JENKINS_BASE_URL, auth)
+        except Exception as e:
+            st.error(f"Error fetching data: {e}")
+            st.stop()
+    
         if all_items:
             df = pd.DataFrame(all_items)
             cache_data(df)
-            st.success(f"Found and cached {len(df)} items.")
+            # Clear the refresh flag
+            if 'refresh_data' in st.session_state:
+                del st.session_state.refresh_data
+            st.success(f"✅ Successfully synced {len(df)} jobs from Jenkins!")
+            st.info("🔄 Refreshing dashboard with latest data...")
             st.rerun()
         else:
             st.warning("No items found or an error occurred.")

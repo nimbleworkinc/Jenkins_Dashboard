@@ -3,7 +3,7 @@ name = "devops"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
     "pandas>=2.3.1",
     "plotly>=6.2.0",
