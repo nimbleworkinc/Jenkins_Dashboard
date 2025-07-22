@@ -35,6 +35,9 @@ Jenkins_Dashboard/
 ```
 
 ## Quick Start
+0. **Install prerequesits**
+Follow the instructions for istalling uv for python package and environemnt management 
+https://docs.astral.sh/uv/getting-started/installation/
 
 1. **Clone the repository:**
    ```bash
@@ -44,9 +47,8 @@ Jenkins_Dashboard/
 
 2. **Create virtual environment and install dependencies:**
    ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   pip install -e .
+   uv sync
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate .
    ```
 
 3. **Set up environment variables:**
@@ -57,7 +59,7 @@ Jenkins_Dashboard/
 
 4. **Run the application:**
    ```bash
-   streamlit run main.py
+   uv run streamlit run main.py
    ```
 
 ```
