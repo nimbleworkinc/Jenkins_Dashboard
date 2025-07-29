@@ -423,16 +423,18 @@ def render_dashboard_tab(df):
     
     # Advanced search options in an expander
     with st.expander("🔧 Advanced Search Options", expanded=False):
-        adv_col1, adv_col2, adv_col3 = st.columns(3)
+        adv_col1, adv_col2, adv_col3, adv_col4 = st.columns(4)
         with adv_col1:
             name_filter = st.text_input("Filter by Name (exact match)")
         with adv_col2:
             folder_filter = st.text_input("Filter by Folder (exact match)")
         with adv_col3:
+            description_filter = st.text_input("Filter by Description")
+        with adv_col4:
             status_filter = st.selectbox("Filter by Status", ["All"] + sorted(df["last_build_status"].unique().tolist()))
     
     # Apply filters
-    filtered_df = apply_filters(df, search_term, name_filter, folder_filter, status_filter, 
+    filtered_df = apply_filters(df, search_term, name_filter, folder_filter, description_filter, status_filter, 
                                folder_filter_multiselect, status_filter_multiselect, [])
     
     # Enhanced visualizations with modern styling (showing filtered data)
@@ -442,7 +444,7 @@ def render_dashboard_tab(df):
     render_enhanced_data_table(filtered_df, len(filtered_df))
 
 
-def apply_filters(df, search_term, name_filter, folder_filter, status_filter, 
+def apply_filters(df, search_term, name_filter, folder_filter, description_filter, status_filter, 
                  folder_filter_multiselect, status_filter_multiselect, type_filter):
     """Apply all filters to the dataframe"""
     filtered_df = df.copy()
@@ -453,7 +455,8 @@ def apply_filters(df, search_term, name_filter, folder_filter, status_filter,
             filtered_df["name"].str.contains(search_term, case=False, na=False) |
             filtered_df["folder"].str.contains(search_term, case=False, na=False) |
             filtered_df["last_build_status"].str.contains(search_term, case=False, na=False) |
-            filtered_df["type"].str.contains(search_term, case=False, na=False)
+            filtered_df["type"].str.contains(search_term, case=False, na=False) |
+            filtered_df["description"].str.contains(search_term, case=False, na=False)
         )
         filtered_df = filtered_df[search_mask]
     
@@ -462,6 +465,8 @@ def apply_filters(df, search_term, name_filter, folder_filter, status_filter,
         filtered_df = filtered_df[filtered_df["name"].str.contains(name_filter, case=False, na=False)]
     if folder_filter:
         filtered_df = filtered_df[filtered_df["folder"].str.contains(folder_filter, case=False, na=False)]
+    if description_filter:
+        filtered_df = filtered_df[filtered_df["description"].str.contains(description_filter, case=False, na=False)]
     if status_filter and status_filter != "All":
         filtered_df = filtered_df[filtered_df["last_build_status"] == status_filter]
     
@@ -691,7 +696,7 @@ def render_enhanced_data_table(df, total_filtered_items):
         
         # Select only the columns we want to display
         display_columns = [
-            "name", "folder", "last_build_status", "success_rate",
+            "name", "folder", "description", "last_build_status", "success_rate",
             "days_since_last_build", "total_builds", "url"
         ]
         
@@ -703,6 +708,11 @@ def render_enhanced_data_table(df, total_filtered_items):
             display_df,
             column_config={
                 "url": st.column_config.LinkColumn("🔗 Job URL"),
+                "description": st.column_config.TextColumn(
+                    "📝 Description",
+                    help="Job description and purpose",
+                    max_chars=100
+                ),
                 "last_build_status": st.column_config.SelectboxColumn(
                     "🎯 Status",
                     options=sorted(df["last_build_status"].unique()),
@@ -736,11 +746,12 @@ def render_enhanced_data_table(df, total_filtered_items):
 def render_cleanup_tab(df):
     """Render the cleanup insights tab with modern styling and enhanced organization"""
     # Create sub-tabs with modern styling
-    cleanup_tab1, cleanup_tab2, cleanup_tab3, cleanup_tab4 = st.tabs([
+    cleanup_tab1, cleanup_tab2, cleanup_tab3, cleanup_tab4, cleanup_tab5 = st.tabs([
         "📊 Summary", 
         "🧪 Test Jobs", 
         "⏰ Inactive Jobs", 
-        "🚫 Disabled Jobs"
+        "🚫 Disabled Jobs",
+        "📝 Description Analysis"
     ])
     
     with cleanup_tab1:
@@ -754,6 +765,9 @@ def render_cleanup_tab(df):
     
     with cleanup_tab4:
         render_disabled_jobs_section(df)
+    
+    with cleanup_tab5:
+        render_description_analysis_section(df)
 
 
 def render_test_jobs_section(df):
@@ -779,14 +793,16 @@ def render_test_jobs_section(df):
             st.info(f"Showing {len(test_jobs)} test jobs matching '{test_search}'")
         
         # Add recommendations
+        test_jobs = test_jobs.copy()
         test_jobs["recommendation"] = test_jobs.apply(
             lambda row: get_test_job_recommendation(row), axis=1
         )
         
         st.dataframe(
-            test_jobs[["name", "folder", "last_build_status", "days_since_last_build", "total_builds", "recommendation", "url"]],
+            test_jobs[["name", "folder", "description", "last_build_status", "days_since_last_build", "total_builds", "recommendation", "url"]],
             column_config={
                 "url": st.column_config.LinkColumn("Job URL"),
+                "description": st.column_config.TextColumn("Description", max_chars=80),
                 "days_since_last_build": st.column_config.NumberColumn("Days Since Last Build", format="%d"),
                 "total_builds": st.column_config.NumberColumn("Total Builds", format="%d"),
             },
@@ -823,6 +839,7 @@ def render_inactive_jobs_section(df):
             st.info(f"Showing {len(inactive_jobs)} inactive jobs matching '{inactive_search}'")
         
         # Add recommendations
+        inactive_jobs = inactive_jobs.copy()
         inactive_jobs["recommendation"] = inactive_jobs.apply(
             lambda row: get_inactive_job_recommendation(row), axis=1
         )
@@ -831,9 +848,10 @@ def render_inactive_jobs_section(df):
         inactive_jobs = inactive_jobs.sort_values("days_since_last_build", ascending=False)
         
         st.dataframe(
-            inactive_jobs[["name", "folder", "last_build_status", "days_since_last_build", "total_builds", "recommendation", "url"]],
+            inactive_jobs[["name", "folder", "description", "last_build_status", "days_since_last_build", "total_builds", "recommendation", "url"]],
             column_config={
                 "url": st.column_config.LinkColumn("Job URL"),
+                "description": st.column_config.TextColumn("Description", max_chars=80),
                 "days_since_last_build": st.column_config.NumberColumn("Days Since Last Build", format="%d"),
                 "total_builds": st.column_config.NumberColumn("Total Builds", format="%d"),
             },
@@ -866,14 +884,16 @@ def render_disabled_jobs_section(df):
             st.info(f"Showing {len(disabled_jobs)} disabled jobs matching '{disabled_search}'")
         
         # Add recommendations
+        disabled_jobs = disabled_jobs.copy()
         disabled_jobs["recommendation"] = disabled_jobs.apply(
             lambda row: get_disabled_job_recommendation(row), axis=1
         )
         
         st.dataframe(
-            disabled_jobs[["name", "folder", "last_build_status", "days_since_last_build", "total_builds", "recommendation", "url"]],
+            disabled_jobs[["name", "folder", "description", "last_build_status", "days_since_last_build", "total_builds", "recommendation", "url"]],
             column_config={
                 "url": st.column_config.LinkColumn("Job URL"),
+                "description": st.column_config.TextColumn("Description", max_chars=80),
                 "days_since_last_build": st.column_config.NumberColumn("Days Since Last Build", format="%d"),
                 "total_builds": st.column_config.NumberColumn("Total Builds", format="%d"),
             },
@@ -890,6 +910,7 @@ def render_cleanup_summary(df):
     test_jobs = df[df["is_test_job"] == True]
     inactive_jobs = df[df["days_since_last_build"].notna() & (df["days_since_last_build"] > DashboardConfig.INACTIVE_JOB_THRESHOLD_DAYS)] if "days_since_last_build" in df.columns else pd.DataFrame()
     disabled_jobs = df[df["is_disabled"] == True] if "is_disabled" in df.columns else pd.DataFrame()
+    jobs_without_description = df[df["description"].isna() | (df["description"] == "")] if "description" in df.columns else pd.DataFrame()
     
     # Enhanced KPI cards for cleanup summary
     st.markdown("""
@@ -946,7 +967,7 @@ def render_cleanup_summary(df):
         )
     
     with col4:
-        total_cleanup_candidates = len(test_jobs) + len(inactive_jobs) + len(disabled_jobs)
+        total_cleanup_candidates = len(test_jobs) + len(inactive_jobs) + len(disabled_jobs) + len(jobs_without_description)
         st.metric(
             "📋 Total Candidates", 
             total_cleanup_candidates,
@@ -978,6 +999,11 @@ def render_cleanup_summary(df):
     elif len(disabled_jobs) > 0:
         recommendations.append("✅ **Disabled jobs under control** - Current disabled job count is acceptable")
     
+    if len(jobs_without_description) > len(df) * 0.3:
+        recommendations.append("⚠️ **Many undocumented jobs** - Consider adding descriptions for better maintainability")
+    elif len(jobs_without_description) > 0:
+        recommendations.append("📋 **Some undocumented jobs** - Consider documenting remaining jobs")
+    
     if not recommendations:
         recommendations.append("🎉 **Excellent pipeline hygiene!** - Your Jenkins instance is well-maintained")
     
@@ -992,10 +1018,10 @@ def render_cleanup_summary(df):
     """, unsafe_allow_html=True)
     
     # Create cleanup progress chart
-    categories = ['Test Jobs', 'Inactive Jobs', 'Disabled Jobs', 'Active Jobs']
-    values = [len(test_jobs), len(inactive_jobs), len(disabled_jobs), 
-              len(df) - len(test_jobs) - len(inactive_jobs) - len(disabled_jobs)]
-    colors = ['#f59e0b', '#ef4444', '#8b5cf6', '#10b981']
+    categories = ['Test Jobs', 'Inactive Jobs', 'Disabled Jobs', 'Undocumented Jobs', 'Active Jobs']
+    values = [len(test_jobs), len(inactive_jobs), len(disabled_jobs), len(jobs_without_description),
+              len(df) - len(test_jobs) - len(inactive_jobs) - len(disabled_jobs) - len(jobs_without_description)]
+    colors = ['#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#10b981']
     
     fig = go.Figure(data=[go.Bar(
         x=categories,
@@ -1044,6 +1070,165 @@ def get_disabled_job_recommendation(row):
         return "🗑️ Consider removal - disabled and inactive"
     else:
         return "📋 Review - disabled but recently active"
+
+
+def render_description_analysis_section(df):
+    """Render description analysis section with insights about job documentation"""
+    st.markdown("""
+    <div class="section-header">
+        <h2>📝 Job Description Analysis</h2>
+        <p>Analysis of job documentation and description quality</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Analyze descriptions
+    jobs_with_description = df[df["description"].notna() & (df["description"] != "")].copy()
+    jobs_without_description = df[df["description"].isna() | (df["description"] == "")].copy()
+    
+    # Calculate description statistics
+    total_jobs = len(df)
+    jobs_with_desc = len(jobs_with_description)
+    jobs_without_desc = len(jobs_without_description)
+    description_coverage = (jobs_with_desc / total_jobs) * 100 if total_jobs > 0 else 0
+    
+    # KPI Cards for description analysis
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric(
+            "📝 Jobs with Descriptions", 
+            jobs_with_desc,
+            f"{description_coverage:.1f}% coverage",
+            delta_color="normal"
+        )
+    
+    with col2:
+        st.metric(
+            "❌ Jobs without Descriptions", 
+            jobs_without_desc,
+            f"{(100-description_coverage):.1f}% missing",
+            delta_color="inverse"
+        )
+    
+    with col3:
+        # Calculate average description length
+        if not jobs_with_description.empty:
+            avg_desc_length = jobs_with_description["description"].str.len().mean()
+            st.metric(
+                "📏 Average Description Length", 
+                f"{avg_desc_length:.0f} chars",
+                "Characters per description",
+                delta_color="normal"
+            )
+        else:
+            st.metric(
+                "📏 Average Description Length", 
+                "0 chars",
+                "No descriptions found",
+                delta_color="inverse"
+            )
+    
+    with col4:
+        # Find jobs with very short descriptions (less than 10 characters)
+        short_descriptions = jobs_with_description[jobs_with_description["description"].str.len() < 10]
+        st.metric(
+            "⚠️ Short Descriptions", 
+            len(short_descriptions),
+            "< 10 characters",
+            delta_color="inverse"
+        )
+    
+    # Description quality insights
+    st.markdown("""
+    <div class="section-header">
+        <h2>💡 Description Quality Insights</h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    insights = []
+    
+    if description_coverage < 50:
+        insights.append("⚠️ **Low description coverage** - Less than 50% of jobs have descriptions")
+    elif description_coverage < 80:
+        insights.append("📋 **Moderate description coverage** - Consider adding descriptions to remaining jobs")
+    else:
+        insights.append("✅ **Good description coverage** - Most jobs are well-documented")
+    
+    if len(short_descriptions) > total_jobs * 0.1:
+        insights.append("⚠️ **Many short descriptions** - Consider improving documentation quality")
+    elif len(short_descriptions) > 0:
+        insights.append("📋 **Some short descriptions** - Review and enhance brief descriptions")
+    
+    if jobs_without_desc > total_jobs * 0.3:
+        insights.append("⚠️ **High number of undocumented jobs** - Consider adding descriptions for better maintainability")
+    elif jobs_without_desc > 0:
+        insights.append("📋 **Some undocumented jobs** - Consider documenting remaining jobs")
+    
+    if not insights:
+        insights.append("🎉 **Excellent documentation!** - All jobs are well-documented")
+    
+    for insight in insights:
+        st.markdown(f"• {insight}")
+    
+    # Show jobs without descriptions
+    if not jobs_without_description.empty:
+        st.markdown("""
+        <div class="section-header">
+            <h2>❌ Jobs Without Descriptions</h2>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.info(f"Found {len(jobs_without_description)} jobs without descriptions")
+        
+        # Add search for jobs without descriptions
+        no_desc_search = st.text_input("🔍 Search jobs without descriptions...", placeholder="Filter by name or folder")
+        if no_desc_search:
+            jobs_without_description = jobs_without_description[
+                jobs_without_description["name"].str.contains(no_desc_search, case=False, na=False) |
+                jobs_without_description["folder"].str.contains(no_desc_search, case=False, na=False)
+            ]
+            st.info(f"Showing {len(jobs_without_description)} jobs matching '{no_desc_search}'")
+        
+        # Add recommendations
+        jobs_without_description = jobs_without_description.copy()
+        jobs_without_description["recommendation"] = "📝 Add description for better documentation"
+        
+        st.dataframe(
+            jobs_without_description[["name", "folder", "last_build_status", "days_since_last_build", "total_builds", "recommendation", "url"]],
+            column_config={
+                "url": st.column_config.LinkColumn("Job URL"),
+                "days_since_last_build": st.column_config.NumberColumn("Days Since Last Build", format="%d"),
+                "total_builds": st.column_config.NumberColumn("Total Builds", format="%d"),
+            },
+            use_container_width=True,
+        )
+    else:
+        st.success("🎉 All jobs have descriptions! Excellent documentation.")
+    
+    # Show jobs with very short descriptions
+    if not short_descriptions.empty:
+        st.markdown("""
+        <div class="section-header">
+            <h2>⚠️ Jobs with Short Descriptions</h2>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.info(f"Found {len(short_descriptions)} jobs with very short descriptions (< 10 characters)")
+        
+        # Add recommendations
+        short_descriptions = short_descriptions.copy()
+        short_descriptions["recommendation"] = "📝 Improve description for better documentation"
+        
+        st.dataframe(
+            short_descriptions[["name", "folder", "description", "last_build_status", "days_since_last_build", "total_builds", "recommendation", "url"]],
+            column_config={
+                "url": st.column_config.LinkColumn("Job URL"),
+                "description": st.column_config.TextColumn("Current Description", max_chars=50),
+                "days_since_last_build": st.column_config.NumberColumn("Days Since Last Build", format="%d"),
+                "total_builds": st.column_config.NumberColumn("Total Builds", format="%d"),
+            },
+            use_container_width=True,
+        )
 
 
 def render_analytics_tab(df):
@@ -1236,6 +1421,7 @@ def render_outlier_analysis(df_clean, df_original):
         st.warning(f"⚠️ Found {len(outliers)} jobs with unrealistic build durations (>24 hours)")
         
         # Add analysis and recommendations
+        outliers = outliers.copy()
         outliers["outlier_type"] = outliers.apply(analyze_outlier_reason, axis=1)
         outliers["recommendation"] = outliers.apply(get_outlier_recommendation, axis=1)
         

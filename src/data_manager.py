@@ -11,7 +11,7 @@ def init_db():
     c = conn.cursor()
     c.execute("""
         CREATE TABLE IF NOT EXISTS jenkins_items
-        (name TEXT, url TEXT, type TEXT, last_build_status TEXT, 
+        (name TEXT, url TEXT, type TEXT, description TEXT, last_build_status TEXT, 
          last_build_url TEXT, folder TEXT, timestamp REAL,
          is_disabled INTEGER, last_build_date TEXT, last_successful_date TEXT,
          last_failed_date TEXT, days_since_last_build INTEGER, total_builds INTEGER,
@@ -30,7 +30,7 @@ def get_cached_data():
     try:
         # Get the data
         df = pd.read_sql_query(
-            "SELECT name, url, type, last_build_status, last_build_url, folder, "
+            "SELECT name, url, type, description, last_build_status, last_build_url, folder, "
             "is_disabled, last_build_date, last_successful_date, last_failed_date, "
             "days_since_last_build, total_builds, success_count, failure_count, "
             "success_rate, is_test_job, last_build_duration, last_successful_duration, "

@@ -40,9 +40,9 @@ def is_test_job(job_name):
 @st.cache_data(show_spinner=False)
 def get_all_jenkins_items(url, _auth):
     items = []
-    # Enhanced API call to get more detailed information including build duration
+    # Enhanced API call to get more detailed information including build duration and description
     api_url = (
-        f"{url.rstrip('/')}/api/json?tree=jobs[name,url,_class,lastBuild[result,url,timestamp,duration],"
+        f"{url.rstrip('/')}/api/json?tree=jobs[name,url,_class,description,lastBuild[result,url,timestamp,duration],"
         f"lastSuccessfulBuild[timestamp,duration],lastFailedBuild[timestamp,duration],"
         f"builds[timestamp,result,duration],property[parameterDefinitions[name,defaultParameterValue[value]]],buildable,color]"
     )
@@ -140,12 +140,16 @@ def get_all_jenkins_items(url, _auth):
                 # Use simple test job detection with exclusion list
                 job_name = job.get("name", "")
                 is_test_job_result = is_test_job(job_name)
+                
+                # Get job description
+                job_description = job.get("description", "")
 
                 items.append(
                     {
                         "name": job_name,
                         "url": job_url,
                         "type": job_class,
+                        "description": job_description,
                         "last_build_status": status,
                         "last_build_url": build_url if build_url else "",
                         "folder": extract_folder_from_url(job_url),
