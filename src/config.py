@@ -47,6 +47,14 @@ class DashboardConfig:
     # Database Settings
     DB_FILE = os.getenv("DB_FILE", "db/jenkins_data.db")
     
+    # PostgreSQL Settings (for production)
+    DB_TYPE = os.getenv("DB_TYPE", "sqlite")  # "sqlite" or "postgresql"
+    POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
+    POSTGRES_PORT = safe_int_env("POSTGRES_PORT", 5432)
+    POSTGRES_DB = os.getenv("POSTGRES_DB", "jenkins_dashboard")
+    POSTGRES_USER = os.getenv("POSTGRES_USER", "jenkins_user")
+    POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "jenkins_password_2024")
+    
     # UI Settings
     DASHBOARD_TITLE = os.getenv("DASHBOARD_TITLE", "Jenkins Dashboard")
     PAGE_LAYOUT = os.getenv("PAGE_LAYOUT", "wide")
