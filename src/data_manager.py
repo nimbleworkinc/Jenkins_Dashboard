@@ -33,7 +33,8 @@ def init_db():
              is_test_job INTEGER, last_build_duration INTEGER, last_successful_duration INTEGER,
              last_failed_duration INTEGER, avg_build_duration REAL, avg_successful_duration REAL,
              avg_failed_duration REAL, min_build_duration INTEGER, max_build_duration INTEGER,
-             total_build_duration INTEGER)
+             total_build_duration INTEGER, owner_name TEXT, owner_email TEXT, other_tag TEXT, 
+             ownership_status TEXT)
         """)
         conn.commit()
         conn.close()
@@ -57,7 +58,7 @@ def get_cached_data():
                 "success_rate, is_test_job, last_build_duration, last_successful_duration, "
                 "last_failed_duration, avg_build_duration, avg_successful_duration, "
                 "avg_failed_duration, min_build_duration, max_build_duration, "
-                "total_build_duration FROM jenkins_items",
+                "total_build_duration, owner_name, owner_email, other_tag, ownership_status FROM jenkins_items",
                 conn,
             )
             

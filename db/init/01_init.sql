@@ -31,6 +31,11 @@ CREATE TABLE IF NOT EXISTS jenkins_items (
     min_build_duration BIGINT DEFAULT 0,
     max_build_duration BIGINT DEFAULT 0,
     total_build_duration BIGINT DEFAULT 0,
+    -- Ownership and metadata columns
+    owner_name VARCHAR(200),
+    owner_email VARCHAR(200),
+    other_tag VARCHAR(200),
+    ownership_status VARCHAR(20) DEFAULT 'unassigned',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -42,6 +47,11 @@ CREATE INDEX IF NOT EXISTS idx_jenkins_items_status ON jenkins_items(last_build_
 CREATE INDEX IF NOT EXISTS idx_jenkins_items_timestamp ON jenkins_items(timestamp);
 CREATE INDEX IF NOT EXISTS idx_jenkins_items_is_disabled ON jenkins_items(is_disabled);
 CREATE INDEX IF NOT EXISTS idx_jenkins_items_is_test_job ON jenkins_items(is_test_job);
+-- Ownership indexes
+CREATE INDEX IF NOT EXISTS idx_jenkins_items_owner_name ON jenkins_items(owner_name);
+CREATE INDEX IF NOT EXISTS idx_jenkins_items_owner_email ON jenkins_items(owner_email);
+CREATE INDEX IF NOT EXISTS idx_jenkins_items_other_tag ON jenkins_items(other_tag);
+CREATE INDEX IF NOT EXISTS idx_jenkins_items_ownership_status ON jenkins_items(ownership_status);
 
 -- Create a function to update the updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -86,6 +96,22 @@ ORDER BY name;
 CREATE OR REPLACE VIEW jobs_without_description AS
 SELECT * FROM jenkins_items 
 WHERE description IS NULL OR description = ''
+ORDER BY name;
+
+-- Ownership views
+CREATE OR REPLACE VIEW unassigned_pipelines AS
+SELECT * FROM jenkins_items 
+WHERE ownership_status = 'unassigned'
+ORDER BY name;
+
+CREATE OR REPLACE VIEW complete_pipelines AS
+SELECT * FROM jenkins_items 
+WHERE ownership_status = 'complete'
+ORDER BY name;
+
+CREATE OR REPLACE VIEW attention_required_pipelines AS
+SELECT * FROM jenkins_items 
+WHERE ownership_status = 'attention_required'
 ORDER BY name;
 
 -- Grant permissions
