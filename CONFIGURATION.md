@@ -65,12 +65,50 @@ TIMEZONE_DISPLAY_FORMAT=%d %b %H:%M %Z
 # TEST_JOB_KEYWORDS=test,testing,tst,demo,trial,experiment
 ```
 
-### Database and Storage
+### Database Configuration
 
 ```bash
-# Database file path (default: db/jenkins_data.db)
+# Database type (default: sqlite)
+# Options: sqlite, postgresql
+DB_TYPE=sqlite
+
+# Database file path for SQLite (default: db/jenkins_data.db)
+DB_FILE=db/jenkins_data.db
+
+# PostgreSQL Configuration (for production)
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=jenkins_dashboard
+POSTGRES_USER=jenkins_user
+POSTGRES_PASSWORD=jenkins_password_2024
+```
+
+## Database Setup
+
+### PostgreSQL (Production)
+```bash
+# Start PostgreSQL container
+docker-compose up -d postgres
+
+# Configure .env for PostgreSQL
+DB_TYPE=postgresql
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=jenkins_dashboard
+POSTGRES_USER=jenkins_user
+POSTGRES_PASSWORD=jenkins_password_2024
+```
+
+### SQLite (Development)
+```bash
+# Configure .env for SQLite
+DB_TYPE=sqlite
 DB_FILE=db/jenkins_data.db
 ```
+
+### Database Management
+- **pgAdmin**: http://localhost:8080 (admin@jenkins-dashboard.com / admin_password_2024)
+- **Direct Access**: `docker exec jenkins_dashboard_db psql -U jenkins_user -d jenkins_dashboard`
 
 ## Environment-Specific Examples
 
@@ -154,14 +192,14 @@ TIMEZONE=Australia/Perth       # Australian Western Time
 ### Method 1: Environment Variables (Recommended)
 1. Edit your `.env` file
 2. Add or modify configuration variables
-3. Restart the application: `streamlit run main.py`
+3. Restart the application: `uv run streamlit run main.py`
 
 ### Method 2: System Environment Variables
 ```bash
 export INACTIVE_JOB_THRESHOLD_DAYS=90
 export ITEMS_PER_PAGE_DEFAULT=100
 export DASHBOARD_TITLE="My Jenkins Dashboard"
-streamlit run main.py
+uv run streamlit run main.py
 ```
 
 ## Configuration Validation
@@ -223,7 +261,7 @@ DASHBOARD_TITLE=Jenkins Server 2 Dashboard
 JENKINS_BASE_URL=https://jenkins2.company.com/
 
 # Run with specific config
-cp .env.jenkins1 .env && streamlit run main.py
+cp .env.jenkins1 .env && uv run streamlit run main.py
 ```
 
 ### Method 2: Environment Variables
@@ -233,7 +271,7 @@ export DASHBOARD_TITLE="Jenkins Dashboard"
 export JENKINS_BASE_URL="https://jenkins-cloud.company.com/"
 export JENKINS_USER="cloud-user"
 export JENKINS_TOKEN="cloud-token"
-streamlit run main.py
+uv run streamlit run main.py
 ```
 
 ## Advanced Configuration

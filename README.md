@@ -9,7 +9,7 @@ A comprehensive Streamlit application for monitoring and analyzing Jenkins jobs 
 - **📈 Advanced Analytics**: Build duration analysis, performance insights, and outlier detection
 - **🔍 Smart Filtering**: Search by job name, folder, or status with multi-select filters
 - **📱 Modern UI**: Clean, professional interface with responsive design
-- **💾 Local Caching**: SQLite database for fast data access and offline viewing
+- **💾 Database Support**: PostgreSQL (production) and SQLite (development) for flexible data storage
 - **🔄 Data Sync**: Manual refresh capability with confirmation modal
 - **📊 Visualizations**: Interactive charts and graphs for data analysis
 - **📋 Export Functionality**: Download data in CSV format
@@ -20,11 +20,14 @@ A comprehensive Streamlit application for monitoring and analyzing Jenkins jobs 
 Jenkins_Dashboard/
 ├── src/
 │   ├── config.py         # Configuration management with environment variables
-│   ├── data_manager.py   # SQLite database operations and caching
+│   ├── data_manager.py   # Database operations (PostgreSQL/SQLite)
+│   ├── postgres_manager.py # PostgreSQL-specific database operations
 │   ├── jenkins_api.py    # Jenkins API communication and data fetching
 │   └── ui.py             # Streamlit UI components and visualizations
 ├── db/
-│   └── jenkins_data.db   # SQLite database for cached Jenkins data
+│   └── init/
+│       └── 01_init.sql   # PostgreSQL database initialization script
+├── docker-compose.yml    # Docker services (PostgreSQL + pgAdmin)
 ├── .env                  # Environment variables (not in git)
 ├── .env.example          # Environment variables template
 ├── main.py               # Application entry point
@@ -35,9 +38,13 @@ Jenkins_Dashboard/
 ```
 
 ## Quick Start
-0. **Install prerequesits**
-Follow the instructions for istalling uv for python package and environemnt management 
-https://docs.astral.sh/uv/getting-started/installation/
+
+### Prerequisites
+- **Python 3.10+** and **uv** for package management
+- **Docker** and **Docker Compose** for PostgreSQL (optional)
+- Follow the instructions for installing uv: https://docs.astral.sh/uv/getting-started/installation/
+
+### Option 1: PostgreSQL (Recommended for Production)
 
 1. **Clone the repository:**
    ```bash
@@ -45,22 +52,44 @@ https://docs.astral.sh/uv/getting-started/installation/
    cd Jenkins_Dashboard
    ```
 
-2. **Create virtual environment and install dependencies:**
+2. **Install dependencies:**
    ```bash
    uv sync
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate .
    ```
 
 3. **Set up environment variables:**
    ```bash
-   cp env_template.txt .env
-   # Edit .env with your Jenkins credentials and other configuration as mentioned in CONFIGURATION.md file
+   cp .env.example .env
+   # Edit .env with your Jenkins credentials and PostgreSQL configuration
    ```
 
-4. **Run the application:**
+4. **Start PostgreSQL database:**
+   ```bash
+   docker-compose up -d postgres
+   ```
+
+5. **Run the application:**
    ```bash
    uv run streamlit run main.py
    ```
+
+### Option 2: SQLite (Development)
+
+1. **Follow steps 1-3 above**
+
+2. **Set database type to SQLite in .env:**
+   ```bash
+   DB_TYPE=sqlite
+   ```
+
+3. **Run the application:**
+   ```bash
+   uv run streamlit run main.py
+   ```
+
+### Database Management (Optional)
+- **pgAdmin**: Access at http://localhost:8080 (admin@jenkins-dashboard.com / admin_password_2024)
+- **Direct access**: `docker exec jenkins_dashboard_db psql -U jenkins_user -d jenkins_dashboard`
 
 ```
 
@@ -82,6 +111,7 @@ https://docs.astral.sh/uv/getting-started/installation/
 - **Build Duration Analysis**: Statistical analysis of build times
 - **Outlier Detection**: Identifies jobs with unrealistic build durations
 - **Performance Insights**: Success rate trends and build frequency analysis
+- **Description Analysis**: Job documentation quality and coverage metrics
 
 ## Dependencies
 
@@ -90,6 +120,7 @@ https://docs.astral.sh/uv/getting-started/installation/
 - **Plotly** (>=6.2.0): Interactive visualizations
 - **Requests** (>=2.32.4): HTTP requests for Jenkins API
 - **Python-dotenv** (>=1.1.1): Environment variable management
+- **psycopg2-binary** (>=2.9.9): PostgreSQL database adapter (for PostgreSQL mode)
 
 ## Reusability
 

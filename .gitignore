@@ -16,3 +16,13 @@ uv.lock
 
 # Database
 db/jenkins_data.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

@@ -423,17 +423,21 @@ def render_dashboard_tab(df):
     
     # Advanced search options in an expander
     with st.expander("🔧 Advanced Search Options", expanded=False):
-        adv_col1, adv_col2, adv_col3 = st.columns(3)
+        adv_col1, adv_col2, adv_col3, adv_col4, adv_col5 = st.columns(5)
         with adv_col1:
             name_filter = st.text_input("Filter by Name (exact match)")
         with adv_col2:
             folder_filter = st.text_input("Filter by Folder (exact match)")
         with adv_col3:
-            status_filter = st.selectbox("Filter by Status", ["All"] + sorted(df["last_build_status"].unique().tolist()))
+            description_filter = st.text_input("Filter by Description")
+        with adv_col4:
+            tag_filter = st.text_input("Filter by Tag")
+        with adv_col5:
+            ownership_status_filter = st.selectbox("Filter by Ownership", ["All", "complete", "attention_required", "unassigned"])
     
     # Apply filters
-    filtered_df = apply_filters(df, search_term, name_filter, folder_filter, status_filter, 
-                               folder_filter_multiselect, status_filter_multiselect, [])
+    filtered_df = apply_filters(df, search_term, name_filter, folder_filter, description_filter, tag_filter, 
+                               folder_filter_multiselect, status_filter_multiselect, [], ownership_status_filter)
     
     # Enhanced visualizations with modern styling (showing filtered data)
     render_enhanced_visualizations(filtered_df, len(filtered_df), total_items)
@@ -442,8 +446,8 @@ def render_dashboard_tab(df):
     render_enhanced_data_table(filtered_df, len(filtered_df))
 
 
-def apply_filters(df, search_term, name_filter, folder_filter, status_filter, 
-                 folder_filter_multiselect, status_filter_multiselect, type_filter):
+def apply_filters(df, search_term, name_filter, folder_filter, description_filter, tag_filter, 
+                 folder_filter_multiselect, status_filter_multiselect, type_filter, ownership_status_filter):
     """Apply all filters to the dataframe"""
     filtered_df = df.copy()
     
@@ -453,7 +457,9 @@ def apply_filters(df, search_term, name_filter, folder_filter, status_filter,
             filtered_df["name"].str.contains(search_term, case=False, na=False) |
             filtered_df["folder"].str.contains(search_term, case=False, na=False) |
             filtered_df["last_build_status"].str.contains(search_term, case=False, na=False) |
-            filtered_df["type"].str.contains(search_term, case=False, na=False)
+            filtered_df["type"].str.contains(search_term, case=False, na=False) |
+            filtered_df["description"].str.contains(search_term, case=False, na=False) |
+            filtered_df["other_tag"].str.contains(search_term, case=False, na=False)
         )
         filtered_df = filtered_df[search_mask]
     
@@ -462,14 +468,20 @@ def apply_filters(df, search_term, name_filter, folder_filter, status_filter,
         filtered_df = filtered_df[filtered_df["name"].str.contains(name_filter, case=False, na=False)]
     if folder_filter:
         filtered_df = filtered_df[filtered_df["folder"].str.contains(folder_filter, case=False, na=False)]
-    if status_filter and status_filter != "All":
-        filtered_df = filtered_df[filtered_df["last_build_status"] == status_filter]
+    if description_filter:
+        filtered_df = filtered_df[filtered_df["description"].str.contains(description_filter, case=False, na=False)]
+    if tag_filter:
+        filtered_df = filtered_df[filtered_df["other_tag"].str.contains(tag_filter, case=False, na=False)]
     
     # Multi-select filters (only apply if selections are made)
     if folder_filter_multiselect:
         filtered_df = filtered_df[filtered_df["folder"].isin(folder_filter_multiselect)]
     if status_filter_multiselect:
         filtered_df = filtered_df[filtered_df["last_build_status"].isin(status_filter_multiselect)]
+    
+    # Ownership status filter
+    if ownership_status_filter and ownership_status_filter != "All":
+        filtered_df = filtered_df[filtered_df["ownership_status"] == ownership_status_filter]
     
     return filtered_df
 
@@ -689,9 +701,9 @@ def render_enhanced_data_table(df, total_filtered_items):
         
         st.info(f"Showing {start_item}-{end_item} of {total_filtered_items} jobs")
         
-        # Select only the columns we want to display
+        # Select only the columns we want to display (Overview tab - core fields only)
         display_columns = [
-            "name", "folder", "last_build_status", "success_rate",
+            "name", "folder", "owner_name", "owner_email", "description", "last_build_status", "success_rate",
             "days_since_last_build", "total_builds", "url"
         ]
         
@@ -703,6 +715,21 @@ def render_enhanced_data_table(df, total_filtered_items):
             display_df,
             column_config={
                 "url": st.column_config.LinkColumn("🔗 Job URL"),
+                "owner_name": st.column_config.TextColumn(
+                    "👤 Owner",
+                    help="Pipeline owner name",
+                    max_chars=50
+                ),
+                "owner_email": st.column_config.TextColumn(
+                    "📧 Email",
+                    help="Pipeline owner email",
+                    max_chars=50
+                ),
+                "description": st.column_config.TextColumn(
+                    "📝 Description",
+                    help="Job description and purpose",
+                    max_chars=100
+                ),
                 "last_build_status": st.column_config.SelectboxColumn(
                     "🎯 Status",
                     options=sorted(df["last_build_status"].unique()),
@@ -779,14 +806,16 @@ def render_test_jobs_section(df):
             st.info(f"Showing {len(test_jobs)} test jobs matching '{test_search}'")
         
         # Add recommendations
+        test_jobs = test_jobs.copy()
         test_jobs["recommendation"] = test_jobs.apply(
             lambda row: get_test_job_recommendation(row), axis=1
         )
         
         st.dataframe(
-            test_jobs[["name", "folder", "last_build_status", "days_since_last_build", "total_builds", "recommendation", "url"]],
+            test_jobs[["name", "folder", "description", "last_build_status", "days_since_last_build", "total_builds", "recommendation", "url"]],
             column_config={
                 "url": st.column_config.LinkColumn("Job URL"),
+                "description": st.column_config.TextColumn("Description", max_chars=80),
                 "days_since_last_build": st.column_config.NumberColumn("Days Since Last Build", format="%d"),
                 "total_builds": st.column_config.NumberColumn("Total Builds", format="%d"),
             },
@@ -823,6 +852,7 @@ def render_inactive_jobs_section(df):
             st.info(f"Showing {len(inactive_jobs)} inactive jobs matching '{inactive_search}'")
         
         # Add recommendations
+        inactive_jobs = inactive_jobs.copy()
         inactive_jobs["recommendation"] = inactive_jobs.apply(
             lambda row: get_inactive_job_recommendation(row), axis=1
         )
@@ -831,9 +861,10 @@ def render_inactive_jobs_section(df):
         inactive_jobs = inactive_jobs.sort_values("days_since_last_build", ascending=False)
         
         st.dataframe(
-            inactive_jobs[["name", "folder", "last_build_status", "days_since_last_build", "total_builds", "recommendation", "url"]],
+            inactive_jobs[["name", "folder", "description", "last_build_status", "days_since_last_build", "total_builds", "recommendation", "url"]],
             column_config={
                 "url": st.column_config.LinkColumn("Job URL"),
+                "description": st.column_config.TextColumn("Description", max_chars=80),
                 "days_since_last_build": st.column_config.NumberColumn("Days Since Last Build", format="%d"),
                 "total_builds": st.column_config.NumberColumn("Total Builds", format="%d"),
             },
@@ -866,14 +897,16 @@ def render_disabled_jobs_section(df):
             st.info(f"Showing {len(disabled_jobs)} disabled jobs matching '{disabled_search}'")
         
         # Add recommendations
+        disabled_jobs = disabled_jobs.copy()
         disabled_jobs["recommendation"] = disabled_jobs.apply(
             lambda row: get_disabled_job_recommendation(row), axis=1
         )
         
         st.dataframe(
-            disabled_jobs[["name", "folder", "last_build_status", "days_since_last_build", "total_builds", "recommendation", "url"]],
+            disabled_jobs[["name", "folder", "description", "last_build_status", "days_since_last_build", "total_builds", "recommendation", "url"]],
             column_config={
                 "url": st.column_config.LinkColumn("Job URL"),
+                "description": st.column_config.TextColumn("Description", max_chars=80),
                 "days_since_last_build": st.column_config.NumberColumn("Days Since Last Build", format="%d"),
                 "total_builds": st.column_config.NumberColumn("Total Builds", format="%d"),
             },
@@ -978,6 +1011,8 @@ def render_cleanup_summary(df):
     elif len(disabled_jobs) > 0:
         recommendations.append("✅ **Disabled jobs under control** - Current disabled job count is acceptable")
     
+
+    
     if not recommendations:
         recommendations.append("🎉 **Excellent pipeline hygiene!** - Your Jenkins instance is well-maintained")
     
@@ -993,7 +1028,7 @@ def render_cleanup_summary(df):
     
     # Create cleanup progress chart
     categories = ['Test Jobs', 'Inactive Jobs', 'Disabled Jobs', 'Active Jobs']
-    values = [len(test_jobs), len(inactive_jobs), len(disabled_jobs), 
+    values = [len(test_jobs), len(inactive_jobs), len(disabled_jobs),
               len(df) - len(test_jobs) - len(inactive_jobs) - len(disabled_jobs)]
     colors = ['#f59e0b', '#ef4444', '#8b5cf6', '#10b981']
     
@@ -1046,6 +1081,9 @@ def get_disabled_job_recommendation(row):
         return "📋 Review - disabled but recently active"
 
 
+
+
+
 def render_analytics_tab(df):
     """Render the Analytics tab with modern styling and enhanced visualizations"""
     # Filter out jobs without duration data
@@ -1062,10 +1100,11 @@ def render_analytics_tab(df):
     jobs_with_duration["avg_failed_duration_min"] = jobs_with_duration["avg_failed_duration"] / 60000
     
     # Create sub-tabs with modern styling
-    analytics_tab1, analytics_tab2, analytics_tab3 = st.tabs([
+    analytics_tab1, analytics_tab2, analytics_tab3, analytics_tab4 = st.tabs([
         "⏱️ Build Duration Analysis", 
         "📊 Performance Insights",
-        "🔍 Outlier Analysis"
+        "🔍 Outlier Analysis",
+        "📋 Metadata Analysis"
     ])
     
     with analytics_tab1:
@@ -1076,6 +1115,9 @@ def render_analytics_tab(df):
     
     with analytics_tab3:
         render_outlier_analysis(jobs_with_duration, jobs_with_duration)
+    
+    with analytics_tab4:
+        render_ownership_analysis(df)
 
 
 def render_build_duration_analysis(df):
@@ -1236,6 +1278,7 @@ def render_outlier_analysis(df_clean, df_original):
         st.warning(f"⚠️ Found {len(outliers)} jobs with unrealistic build durations (>24 hours)")
         
         # Add analysis and recommendations
+        outliers = outliers.copy()
         outliers["outlier_type"] = outliers.apply(analyze_outlier_reason, axis=1)
         outliers["recommendation"] = outliers.apply(get_outlier_recommendation, axis=1)
         
@@ -1446,4 +1489,288 @@ def render_performance_insights(df):
                 "job_count": st.column_config.NumberColumn("Job Count", format="%d"),
             },
             use_container_width=True
+        )
+
+
+def render_ownership_analysis(df):
+    """Render ownership analysis with status overview and detailed breakdown"""
+    
+    # Metadata analysis overview
+    st.markdown("""
+    <div class="section-header">
+        <h2>📋 Pipeline Metadata Analysis</h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Calculate ownership statistics
+    total_pipelines = len(df)
+    complete_pipelines = len(df[df['ownership_status'] == 'complete'])
+    attention_required = len(df[df['ownership_status'] == 'attention_required'])
+    unassigned_pipelines = len(df[df['ownership_status'] == 'unassigned'])
+    
+    # Calculate percentages
+    complete_percentage = (complete_pipelines / total_pipelines * 100) if total_pipelines > 0 else 0
+    attention_percentage = (attention_required / total_pipelines * 100) if total_pipelines > 0 else 0
+    unassigned_percentage = (unassigned_pipelines / total_pipelines * 100) if total_pipelines > 0 else 0
+    
+    # Display metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Total Pipelines", f"{total_pipelines:,}")
+    
+    with col2:
+        st.metric("✅ Complete", f"{complete_pipelines:,} ({complete_percentage:.1f}%)")
+    
+    with col3:
+        st.metric("⚠️ Attention Required", f"{attention_required:,} ({attention_percentage:.1f}%)")
+    
+    with col4:
+        st.metric("🔴 Unassigned", f"{unassigned_pipelines:,} ({unassigned_percentage:.1f}%)")
+    
+    # Ownership status chart
+    st.markdown("""
+    <div class="section-header">
+        <h2>📊 Ownership Status Distribution</h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    status_data = {
+        'Complete': complete_pipelines,
+        'Attention Required': attention_required,
+        'Unassigned': unassigned_pipelines
+    }
+    
+    colors = ['#059669', '#d97706', '#dc2626']
+    
+    fig = go.Figure(data=[go.Pie(
+        labels=list(status_data.keys()),
+        values=list(status_data.values()),
+        hole=0.4,
+        marker_colors=colors,
+        textinfo='label+percent+value',
+        textfont_size=14
+    )])
+    
+    fig.update_layout(
+        title="Pipeline Ownership Status",
+        showlegend=True,
+        height=400,
+        margin=dict(t=50, b=50, l=50, r=50)
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Detailed ownership table
+    st.markdown("""
+    <div class="section-header">
+        <h2>📋 Detailed Ownership Status</h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Create detailed table with ownership information
+    ownership_columns = [
+        "name", "folder", "owner_name", "owner_email", "description", "other_tag", 
+        "ownership_status", "last_build_status", "success_rate", "url"
+    ]
+    
+    # Filter to only show columns that exist in the dataframe
+    available_columns = [col for col in ownership_columns if col in df.columns]
+    ownership_df = df[available_columns].copy()
+    
+    # Add status icons
+    def get_status_icon(status):
+        if status == 'complete':
+            return '✅'
+        elif status == 'attention_required':
+            return '⚠️'
+        else:
+            return '🔴'
+    
+    if 'ownership_status' in ownership_df.columns:
+        ownership_df['Status'] = ownership_df['ownership_status'].apply(get_status_icon)
+    
+    # Display the table
+    st.dataframe(
+        ownership_df,
+        column_config={
+            "url": st.column_config.LinkColumn("🔗 Job URL"),
+            "owner_name": st.column_config.TextColumn(
+                "👤 Owner",
+                help="Pipeline owner name",
+                max_chars=50
+            ),
+            "owner_email": st.column_config.TextColumn(
+                "📧 Email",
+                help="Pipeline owner email",
+                max_chars=50
+            ),
+            "description": st.column_config.TextColumn(
+                "📝 Description",
+                help="Pipeline description and purpose",
+                max_chars=100
+            ),
+            "other_tag": st.column_config.TextColumn(
+                "🏷️ Tag",
+                help="Custom tag for filtering",
+                max_chars=30
+            ),
+            "ownership_status": st.column_config.SelectboxColumn(
+                "Status",
+                options=['complete', 'attention_required', 'unassigned'],
+                help="Ownership completion status"
+            ),
+            "last_build_status": st.column_config.SelectboxColumn(
+                "Build Status",
+                options=sorted(df["last_build_status"].unique()),
+                help="Last build status"
+            ),
+            "success_rate": st.column_config.NumberColumn(
+                "Success Rate",
+                format="%.1f%%",
+                help="Percentage of successful builds"
+            ),
+        },
+        use_container_width=True,
+        hide_index=True
+    )
+    
+    # Ownership recommendations
+    st.markdown("""
+    <div class="section-header">
+        <h2>💡 Ownership Recommendations</h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if unassigned_pipelines > 0:
+        st.warning(f"🔴 **{unassigned_pipelines} pipelines need ownership assignment**")
+        st.write("These pipelines have no structured ownership information. Consider adding:")
+        st.write("- `[Owner_Name: name]`")
+        st.write("- `[Owner_Email: email@company.com]`")
+        st.write("- `[Description: pipeline purpose]`")
+        st.write("")
+        st.write("**Optional for filtering specific pipelines:**")
+        st.write("- `[Other_Tag: Temporary]`")
+    
+    if attention_required > 0:
+        st.info(f"⚠️ **{attention_required} pipelines need attention**")
+        st.write("These pipelines have partial ownership information. Please complete the missing fields.")
+    
+    if complete_pipelines > 0:
+        st.success(f"✅ **{complete_pipelines} pipelines have complete ownership information**")
+        st.write("Great job! These pipelines have all required ownership fields filled.")
+    
+    # Description Analysis Section
+    st.markdown("""
+    <div class="section-header">
+        <h2>📝 Documentation Quality Analysis</h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Analyze descriptions
+    jobs_with_description = df[df["description"].notna() & (df["description"] != "")].copy()
+    jobs_without_description = df[df["description"].isna() | (df["description"] == "")].copy()
+    
+    # Calculate description statistics
+    total_jobs = len(df)
+    jobs_with_desc = len(jobs_with_description)
+    jobs_without_desc = len(jobs_without_description)
+    description_coverage = (jobs_with_desc / total_jobs) * 100 if total_jobs > 0 else 0
+    
+    # Description KPI Cards
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric(
+            "📝 Jobs with Descriptions", 
+            jobs_with_desc,
+            f"{description_coverage:.1f}% coverage",
+            delta_color="normal"
+        )
+    
+    with col2:
+        st.metric(
+            "❌ Jobs without Descriptions", 
+            jobs_without_desc,
+            f"{(100-description_coverage):.1f}% missing",
+            delta_color="inverse"
+        )
+    
+    with col3:
+        # Calculate average description length
+        if not jobs_with_description.empty:
+            avg_desc_length = jobs_with_description["description"].str.len().mean()
+            st.metric(
+                "📏 Average Description Length", 
+                f"{avg_desc_length:.0f} chars",
+                "Characters per description",
+                delta_color="normal"
+            )
+        else:
+            st.metric(
+                "📏 Average Description Length", 
+                "0 chars",
+                "No descriptions found",
+                delta_color="inverse"
+            )
+    
+    with col4:
+        # Find jobs with very short descriptions (less than 10 characters)
+        short_descriptions = jobs_with_description[jobs_with_description["description"].str.len() < 10]
+        st.metric(
+            "⚠️ Short Descriptions", 
+            len(short_descriptions),
+            "< 10 characters",
+            delta_color="inverse"
+        )
+    
+    # Description quality insights
+    st.markdown("""
+    <div class="section-header">
+        <h2>💡 Documentation Quality Insights</h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    insights = []
+    
+    if description_coverage < 50:
+        insights.append("⚠️ **Low description coverage** - Less than 50% of jobs have descriptions")
+    elif description_coverage < 80:
+        insights.append("📋 **Moderate description coverage** - Consider adding descriptions to remaining jobs")
+    else:
+        insights.append("✅ **Good description coverage** - Most jobs are well-documented")
+    
+    if len(short_descriptions) > total_jobs * 0.1:
+        insights.append("⚠️ **Many short descriptions** - Consider improving documentation quality")
+    elif len(short_descriptions) > 0:
+        insights.append("📋 **Some short descriptions** - Review and enhance brief descriptions")
+    
+    if jobs_without_desc > total_jobs * 0.3:
+        insights.append("⚠️ **High number of undocumented jobs** - Consider adding descriptions for better maintainability")
+    elif jobs_without_desc > 0:
+        insights.append("📋 **Some undocumented jobs** - Consider documenting remaining jobs")
+    
+    if not insights:
+        insights.append("🎉 **Excellent documentation!** - All jobs are well-documented")
+    
+    for insight in insights:
+        st.markdown(f"• {insight}")
+    
+    # Show jobs without descriptions
+    if not jobs_without_description.empty:
+        st.markdown("""
+        <div class="section-header">
+            <h2>❌ Jobs Without Descriptions</h2>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.dataframe(
+            jobs_without_description[["name", "folder", "last_build_status", "days_since_last_build", "total_builds", "url"]],
+            column_config={
+                "url": st.column_config.LinkColumn("Job URL"),
+                "days_since_last_build": st.column_config.NumberColumn("Days Since Last Build", format="%d"),
+                "total_builds": st.column_config.NumberColumn("Total Builds", format="%d"),
+            },
+            use_container_width=True,
+            hide_index=True
         )

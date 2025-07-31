@@ -3,6 +3,7 @@ from urllib.parse import unquote
 import streamlit as st
 from datetime import datetime, timezone
 from src.config import DashboardConfig
+import re
 
 
 def extract_folder_from_url(url):
@@ -40,9 +41,9 @@ def is_test_job(job_name):
 @st.cache_data(show_spinner=False)
 def get_all_jenkins_items(url, _auth):
     items = []
-    # Enhanced API call to get more detailed information including build duration
+    # Enhanced API call to get more detailed information including build duration and description
     api_url = (
-        f"{url.rstrip('/')}/api/json?tree=jobs[name,url,_class,lastBuild[result,url,timestamp,duration],"
+        f"{url.rstrip('/')}/api/json?tree=jobs[name,url,_class,description,lastBuild[result,url,timestamp,duration],"
         f"lastSuccessfulBuild[timestamp,duration],lastFailedBuild[timestamp,duration],"
         f"builds[timestamp,result,duration],property[parameterDefinitions[name,defaultParameterValue[value]]],buildable,color]"
     )
@@ -140,12 +141,22 @@ def get_all_jenkins_items(url, _auth):
                 # Use simple test job detection with exclusion list
                 job_name = job.get("name", "")
                 is_test_job_result = is_test_job(job_name)
+                
+                # Get job description and parse ownership
+                job_description = job.get("description", "")
+                ownership_data = parse_pipeline_ownership(job_description)
 
                 items.append(
                     {
                         "name": job_name,
                         "url": job_url,
                         "type": job_class,
+                        "description": job_description,
+                        # Ownership data
+                        "owner_name": ownership_data.get('owner_name'),
+                        "owner_email": ownership_data.get('owner_email'),
+                        "other_tag": ownership_data.get('other_tag'),
+                        "ownership_status": ownership_data.get('ownership_status'),
                         "last_build_status": status,
                         "last_build_url": build_url if build_url else "",
                         "folder": extract_folder_from_url(job_url),
@@ -174,3 +185,79 @@ def get_all_jenkins_items(url, _auth):
     except requests.exceptions.RequestException as e:
         st.error(f"Error fetching data from {api_url}: {e}")
     return items
+
+
+def parse_pipeline_ownership(description):
+    """
+    Parse pipeline description to extract ownership information.
+    Handles all edge cases: complete, partial, blank values, and unstructured text.
+    
+    Returns:
+        dict: Parsed ownership data with status
+    """
+    if not description:
+        return get_default_ownership_data()
+    
+    parsed_data = get_default_ownership_data()
+    
+    try:
+        # Parse mandatory fields
+        owner_name_match = re.search(r'\[Owner_Name:\s*([^\]]*)\]', description, re.IGNORECASE)
+        owner_email_match = re.search(r'\[Owner_Email:\s*([^\]]*)\]', description, re.IGNORECASE)
+        description_match = re.search(r'\[Description:\s*([^\]]*)\]', description, re.IGNORECASE)
+        
+        # Parse optional field
+        other_tag_match = re.search(r'\[Other_Tag:\s*([^\]]*)\]', description, re.IGNORECASE)
+        
+        # Extract values (check if not empty after stripping)
+        if owner_name_match:
+            owner_name = owner_name_match.group(1).strip()
+            if owner_name:  # Only set if not empty
+                parsed_data['owner_name'] = owner_name
+        
+        if owner_email_match:
+            owner_email = owner_email_match.group(1).strip()
+            if owner_email:  # Only set if not empty
+                parsed_data['owner_email'] = owner_email
+        
+        if description_match:
+            desc_value = description_match.group(1).strip()
+            if desc_value:  # Only set if not empty
+                parsed_data['description'] = desc_value
+        
+        if other_tag_match:
+            tag_value = other_tag_match.group(1).strip()
+            if tag_value:  # Only set if not empty
+                parsed_data['other_tag'] = tag_value
+        
+        # Handle regular text (non-structured description)
+        if not any([parsed_data.get('owner_name'), parsed_data.get('owner_email'), parsed_data.get('description')]):
+            # No structured data found, treat entire text as description
+            parsed_data['description'] = description.strip()
+        
+        # Determine status based on mandatory fields
+        mandatory_fields = ['owner_name', 'owner_email', 'description']
+        completed_mandatory = sum(1 for field in mandatory_fields if parsed_data.get(field))
+        
+        if completed_mandatory == 3:
+            parsed_data['ownership_status'] = 'complete'
+        elif completed_mandatory > 0:
+            parsed_data['ownership_status'] = 'attention_required'
+        else:
+            parsed_data['ownership_status'] = 'unassigned'
+        
+        return parsed_data
+        
+    except Exception as e:
+        print(f"Warning: Failed to parse ownership from description. Error: {e}")
+        return get_default_ownership_data()
+
+def get_default_ownership_data():
+    """Return default ownership data structure"""
+    return {
+        'owner_name': None,
+        'owner_email': None,
+        'description': None,
+        'other_tag': None,
+        'ownership_status': 'unassigned'
+    }

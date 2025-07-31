@@ -10,7 +10,7 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "requests>=2.32.4",
     "streamlit>=1.46.1",
-    "watchdog>=6.0.0",
+    "psycopg2-binary>=2.9.9",
 ]
 
 [dependency-groups]
