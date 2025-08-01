@@ -397,8 +397,8 @@ def render_dashboard_tab(df):
         # Smart search with autocomplete suggestions
         search_term = st.text_input(
             "🔎 Quick Search",
-            placeholder="Search by job name, folder, or status...",
-            help="Type to search across all fields"
+            placeholder="Search by job name, folder, status, editor, user...",
+            help="Type to search across all fields including last editor and last user"
         )
     
     with col2:
@@ -461,6 +461,15 @@ def apply_filters(df, search_term, name_filter, folder_filter, description_filte
             filtered_df["description"].str.contains(search_term, case=False, na=False) |
             filtered_df["other_tag"].str.contains(search_term, case=False, na=False)
         )
+        
+        # Add last_editor to search if column exists
+        if "last_editor" in filtered_df.columns:
+            search_mask = search_mask | filtered_df["last_editor"].str.contains(search_term, case=False, na=False)
+        
+        # Add last_user to search if column exists
+        if "last_user" in filtered_df.columns:
+            search_mask = search_mask | filtered_df["last_user"].str.contains(search_term, case=False, na=False)
+        
         filtered_df = filtered_df[search_mask]
     
     # Advanced filters
@@ -704,11 +713,37 @@ def render_enhanced_data_table(df, total_filtered_items):
         # Select only the columns we want to display (Overview tab - core fields only)
         display_columns = [
             "name", "folder", "owner_name", "owner_email", "description", "last_build_status", "success_rate",
-            "days_since_last_build", "total_builds", "url"
+            "days_since_last_build", "total_builds", "last_editor", "last_user", "url"
         ]
         
-        # Filter dataframe to only show selected columns
-        display_df = paginated_df[display_columns].copy()
+        # Filter dataframe to only show selected columns (handle missing columns gracefully)
+        available_display_columns = [col for col in display_columns if col in paginated_df.columns]
+        display_df = paginated_df[available_display_columns].copy()
+        
+        # Add missing columns with default values if they don't exist
+        missing_columns = []
+        for col in display_columns:
+            if col not in display_df.columns:
+                if col == "last_editor":
+                    display_df[col] = None  # Will show as empty cells
+                    missing_columns.append("Last Editor")
+                elif col == "last_user":
+                    display_df[col] = None  # Will show as empty cells
+                    missing_columns.append("Last User")
+                else:
+                    display_df[col] = None
+        
+        # Show information message if new columns were missing
+        if missing_columns:
+            if len(missing_columns) == 1:
+                feature_name = missing_columns[0]
+                if feature_name == "Last Editor":
+                    st.info("💡 **New Feature Available**: The 'Last Editor' column is now available! Click the '🔄' sync button above to refresh data from Jenkins and see who last modified each job.")
+                elif feature_name == "Last User":
+                    st.info("💡 **New Feature Available**: The 'Last User' column is now available! Click the '🔄' sync button above to refresh data from Jenkins and see who started each job's last build.")
+            else:
+                features = " and ".join(missing_columns)
+                st.info(f"💡 **New Features Available**: The '{features}' columns are now available! Click the '🔄' sync button above to refresh data from Jenkins and see the latest user information.")
         
         # Enhanced dataframe with cleaner columns and modern styling
         st.dataframe(
@@ -751,6 +786,16 @@ def render_enhanced_data_table(df, total_filtered_items):
                     "🔢 Total Builds",
                     format="%d",
                     help="Total number of builds for this job"
+                ),
+                "last_editor": st.column_config.TextColumn(
+                    "👨‍💻 Last Editor",
+                    help="User who last modified the job configuration",
+                    max_chars=50
+                ),
+                "last_user": st.column_config.TextColumn(
+                    "🚀 Last User",
+                    help="User who started/triggered the last build",
+                    max_chars=50
                 ),
             },
             use_container_width=True,
@@ -1571,12 +1616,17 @@ def render_ownership_analysis(df):
     # Create detailed table with ownership information
     ownership_columns = [
         "name", "folder", "owner_name", "owner_email", "description", "other_tag", 
-        "ownership_status", "last_build_status", "success_rate", "url"
+        "ownership_status", "last_build_status", "success_rate", "last_editor", "last_user", "url"
     ]
     
     # Filter to only show columns that exist in the dataframe
     available_columns = [col for col in ownership_columns if col in df.columns]
     ownership_df = df[available_columns].copy()
+    
+    # Add missing columns with default values if they don't exist
+    for col in ownership_columns:
+        if col not in ownership_df.columns:
+            ownership_df[col] = None
     
     # Add status icons
     def get_status_icon(status):
@@ -1629,6 +1679,16 @@ def render_ownership_analysis(df):
                 "Success Rate",
                 format="%.1f%%",
                 help="Percentage of successful builds"
+            ),
+            "last_editor": st.column_config.TextColumn(
+                "👨‍💻 Last Editor",
+                help="User who last modified the job configuration",
+                max_chars=50
+            ),
+            "last_user": st.column_config.TextColumn(
+                "🚀 Last User",
+                help="User who started/triggered the last build",
+                max_chars=50
             ),
         },
         use_container_width=True,

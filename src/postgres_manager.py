@@ -46,7 +46,7 @@ class PostgreSQLManager:
                        success_rate, is_test_job, last_build_duration, last_successful_duration,
                        last_failed_duration, avg_build_duration, avg_successful_duration,
                        avg_failed_duration, min_build_duration, max_build_duration,
-                       total_build_duration, owner_name, owner_email, other_tag, ownership_status, timestamp
+                       total_build_duration, owner_name, owner_email, other_tag, ownership_status, last_editor, last_user, timestamp
                 FROM jenkins_items
                 ORDER BY name
             """
@@ -128,7 +128,7 @@ class PostgreSQLManager:
                 "last_successful_duration", "last_failed_duration", "avg_build_duration", 
                 "avg_successful_duration", "avg_failed_duration", "min_build_duration", 
                 "max_build_duration", "total_build_duration", "owner_name", "owner_email", 
-                "other_tag", "ownership_status", "timestamp"
+                "other_tag", "ownership_status", "last_editor", "last_user", "timestamp"
             ]
             
             # Prepare data tuples with proper data type handling

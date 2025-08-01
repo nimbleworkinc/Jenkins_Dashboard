@@ -39,11 +39,11 @@ def is_test_job(job_name):
 
 
 @st.cache_data(show_spinner=False)
-def get_all_jenkins_items(url, _auth):
+def get_all_jenkins_items(url, _auth, _bypass_cache=False):
     items = []
-    # Enhanced API call to get more detailed information including build duration and description
+    # Enhanced API call to get more detailed information including build duration, description, and user info
     api_url = (
-        f"{url.rstrip('/')}/api/json?tree=jobs[name,url,_class,description,lastBuild[result,url,timestamp,duration],"
+        f"{url.rstrip('/')}/api/json?tree=jobs[name,url,_class,description,lastBuild[result,url,timestamp,duration,actions[causes[userId,userName]],changeSet[items[author[fullName]]]],"
         f"lastSuccessfulBuild[timestamp,duration],lastFailedBuild[timestamp,duration],"
         f"builds[timestamp,result,duration],property[parameterDefinitions[name,defaultParameterValue[value]]],buildable,color]"
     )
@@ -66,6 +66,7 @@ def get_all_jenkins_items(url, _auth):
                 is_disabled = not job.get("buildable", True)
                 
                 # Get last build info
+                last_editor = None
                 if last_build:
                     status = last_build.get("result")
                     if status is None:
@@ -76,11 +77,20 @@ def get_all_jenkins_items(url, _auth):
                     last_build_date = None
                     if last_build_timestamp:
                         last_build_date = datetime.fromtimestamp(last_build_timestamp/1000, tz=timezone.utc)
+                    
+                    # Extract last editor information - try JobConfigHistory first, then fallback to build data
+                    last_editor = get_job_config_history(job_url, _auth)
+                    if not last_editor:
+                        last_editor = extract_last_editor_info(last_build)
+                    
+                    # Extract last user who started/triggered the build
+                    last_user = extract_last_user_info(last_build)
                 else:
                     status = "Not Built"
                     build_url = ""
                     last_build_date = None
                     last_build_duration = 0
+                    last_user = None
                 
                 # Get last successful build info
                 last_successful_date = None
@@ -180,6 +190,9 @@ def get_all_jenkins_items(url, _auth):
                         "min_build_duration": min_build_duration,
                         "max_build_duration": max_build_duration,
                         "total_build_duration": sum(build_durations) if build_durations else 0,
+                        # User data
+                        "last_editor": last_editor,
+                        "last_user": last_user,
                     }
                 )
     except requests.exceptions.RequestException as e:
@@ -261,3 +274,113 @@ def get_default_ownership_data():
         'other_tag': None,
         'ownership_status': 'unassigned'
     }
+
+
+def get_job_config_history(job_url, auth):
+    """
+    Get the last editor from JobConfigHistory plugin.
+    
+    Args:
+        job_url (str): Job URL
+        auth: Authentication object
+        
+    Returns:
+        str: User ID/name who last modified the job configuration or None if not found
+    """
+    try:
+        # Try JobConfigHistory API first
+        config_history_url = f"{job_url.rstrip('/')}/jobConfigHistory/api/json?tree=jobConfigHistory[0][user]"
+        response = requests.get(config_history_url, auth=auth, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            job_config_history = data.get("jobConfigHistory", [])
+            if job_config_history and len(job_config_history) > 0:
+                latest_change = job_config_history[0]  # Most recent change
+                user = latest_change.get("user")
+                if user:
+                    return user
+    except (requests.exceptions.RequestException, KeyError, IndexError):
+        # JobConfigHistory plugin not available or other error, fallback to build data
+        pass
+    
+    return None
+
+
+def extract_last_user_info(last_build):
+    """
+    Extract user information who triggered/started the last build.
+    
+    Args:
+        last_build (dict): Last build data from Jenkins API
+        
+    Returns:
+        str: User ID/name who started the build or None if not found
+    """
+    if not last_build:
+        return None
+    
+    # Try to get user from build causes (user who triggered the build)
+    actions = last_build.get("actions", [])
+    for action in actions:
+        if isinstance(action, dict) and "causes" in action:
+            causes = action.get("causes", [])
+            for cause in causes:
+                if isinstance(cause, dict):
+                    # Check for userId first (more reliable)
+                    user_id = cause.get("userId")
+                    if user_id:
+                        return user_id
+                    # Fallback to userName
+                    user_name = cause.get("userName")
+                    if user_name:
+                        return user_name
+    
+    return None
+
+
+def extract_last_editor_info(last_build):
+    """
+    Extract user information from last build data (fallback method).
+    Returns the user who last triggered the build or committed changes.
+    
+    Args:
+        last_build (dict): Last build data from Jenkins API
+        
+    Returns:
+        str: User ID/name or None if not found
+    """
+    if not last_build:
+        return None
+    
+    # Try to get user from build causes (user who triggered the build)
+    actions = last_build.get("actions", [])
+    for action in actions:
+        if isinstance(action, dict) and "causes" in action:
+            causes = action.get("causes", [])
+            for cause in causes:
+                if isinstance(cause, dict):
+                    # Check for userId first (more reliable)
+                    user_id = cause.get("userId")
+                    if user_id:
+                        return user_id
+                    # Fallback to userName
+                    user_name = cause.get("userName")
+                    if user_name:
+                        return user_name
+    
+    # Try to get user from changeset (commit author)
+    changeset = last_build.get("changeSet", {})
+    if isinstance(changeset, dict):
+        items = changeset.get("items", [])
+        if items and len(items) > 0:
+            # Get the first commit author
+            first_item = items[0]
+            if isinstance(first_item, dict):
+                author = first_item.get("author", {})
+                if isinstance(author, dict):
+                    author_name = author.get("fullName")
+                    if author_name:
+                        return author_name
+    
+    return None

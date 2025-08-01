@@ -45,9 +45,15 @@ if df is None or df.empty or st.session_state.get('refresh_data', False):
     auth = HTTPBasicAuth(DashboardConfig.JENKINS_USER, DashboardConfig.JENKINS_TOKEN)
     
     with st.spinner("Fetching all jobs and pipelines... this may take a moment."):
+        # Clear cache if this is a refresh request to ensure fresh data
+        if st.session_state.get('refresh_data', False):
+            get_all_jenkins_items.clear()
+        
         # Suppress the function call display by using a try-except wrapper
         try:
-            all_items = get_all_jenkins_items(DashboardConfig.JENKINS_BASE_URL, auth)
+            # Pass bypass_cache=True when refreshing to ensure fresh data
+            bypass_cache = st.session_state.get('refresh_data', False)
+            all_items = get_all_jenkins_items(DashboardConfig.JENKINS_BASE_URL, auth, bypass_cache)
         except Exception as e:
             st.error(f"Error fetching data: {e}")
             st.stop()
